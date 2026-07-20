@@ -10,6 +10,13 @@ const SOURCES = {
   }
 };
 
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [600, 1400, 2600];
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function extractGoogleSpreadsheetId(value) {
   const text = String(value || "").trim();
 
@@ -24,14 +31,16 @@ function extractGoogleSpreadsheetId(value) {
     if (match) return match[1];
   }
 
-  // También permite guardar directamente el ID en Netlify.
   if (/^[a-zA-Z0-9_-]{20,}$/.test(text)) return text;
-
   return null;
 }
 
-function buildGoogleExportUrl(fileId) {
-  return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(fileId)}/export?format=xlsx`;
+function buildGoogleExportUrl(fileId, attempt) {
+  const nonce = `${Date.now()}-${attempt}`;
+  return (
+    `https://docs.google.com/spreadsheets/d/${encodeURIComponent(fileId)}` +
+    `/export?format=xlsx&cacheBust=${encodeURIComponent(nonce)}`
+  );
 }
 
 function isExcel(buffer, contentType = "") {
@@ -52,6 +61,34 @@ function isExcel(buffer, contentType = "") {
   );
 }
 
+function textPreview(bytes) {
+  try {
+    return new TextDecoder("utf-8")
+      .decode(bytes.slice(0, 800))
+      .replace(/\s+/g, " ")
+      .slice(0, 240);
+  } catch (_) {
+    return "";
+  }
+}
+
+async function fetchExport(fileId, attempt) {
+  const exportUrl = buildGoogleExportUrl(fileId, attempt);
+
+  return fetch(exportUrl, {
+    redirect: "follow",
+    cache: "no-store",
+    headers: {
+      "User-Agent": "Mozilla/5.0 Portal-Iniciativas/1.0",
+      "Accept":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet," +
+        "application/octet-stream;q=0.9,*/*;q=0.1",
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache"
+    }
+  });
+}
+
 async function downloadSpreadsheet(source) {
   const fileId = extractGoogleSpreadsheetId(source.url);
 
@@ -61,54 +98,60 @@ async function downloadSpreadsheet(source) {
     );
   }
 
-  const exportUrl = buildGoogleExportUrl(fileId);
+  let lastError = null;
 
-  const response = await fetch(exportUrl, {
-    redirect: "follow",
-    headers: {
-      "User-Agent": "Mozilla/5.0 Portal-Iniciativas/1.0",
-      "Accept":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet," +
-        "application/octet-stream;q=0.9,*/*;q=0.1"
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const response = await fetchExport(fileId, attempt);
+
+      if (!response.ok) {
+        throw new Error(
+          `Google respondió ${response.status} al exportar ${source.label}.`
+        );
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!isExcel(bytes, contentType)) {
+        const preview = textPreview(bytes);
+
+        if (
+          /sign in|accounts\.google|request access|you need access|acceso/i.test(
+            preview
+          )
+        ) {
+          throw new Error(
+            `La hoja de ${source.label} no permite exportación pública. ` +
+            `Compártala como “Cualquier persona con el enlace · Lector”.`
+          );
+        }
+
+        throw new Error(
+          `Google no devolvió un Excel válido para ${source.label}.`
+        );
+      }
+
+      return {
+        arrayBuffer,
+        response,
+        fileId,
+        attempts: attempt
+      };
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(RETRY_DELAYS_MS[attempt - 1]);
+      }
     }
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `Google respondió ${response.status} al intentar exportar ${source.label}.`
-    );
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  const contentType = response.headers.get("content-type") || "";
-
-  if (!isExcel(bytes, contentType)) {
-    const textPreview = new TextDecoder("utf-8")
-      .decode(bytes.slice(0, 500))
-      .replace(/\s+/g, " ")
-      .slice(0, 160);
-
-    if (
-      /sign in|accounts\.google|request access|you need access|acceso/i.test(
-        textPreview
-      )
-    ) {
-      throw new Error(
-        `La hoja de ${source.label} no permite exportación pública. Compártala como “Cualquier persona con el enlace · Lector”.`
-      );
-    }
-
-    throw new Error(
-      `Google no devolvió un archivo Excel válido para ${source.label}.`
-    );
-  }
-
-  return {
-    arrayBuffer,
-    response,
-    fileId
-  };
+  throw new Error(
+    `${lastError?.message || `No fue posible exportar ${source.label}.`} ` +
+    `Se realizaron ${MAX_ATTEMPTS} intentos.`
+  );
 }
 
 export default async (request) => {
@@ -146,15 +189,16 @@ export default async (request) => {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `inline; filename="${fileName}"`,
-        "Cache-Control":
-          "public, max-age=0, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": "no-store, max-age=0",
         "X-Source-File": fileName,
         "X-Source-Team": team,
         "X-Source-Modified":
           result.response.headers.get("last-modified") || "",
         "X-Google-File-Id": result.fileId,
+        "X-Download-Attempts": String(result.attempts),
         "Access-Control-Expose-Headers":
-          "X-Source-File,X-Source-Team,X-Source-Modified,X-Google-File-Id"
+          "X-Source-File,X-Source-Team,X-Source-Modified," +
+          "X-Google-File-Id,X-Download-Attempts"
       }
     });
   } catch (error) {
@@ -167,7 +211,12 @@ export default async (request) => {
           error?.message ||
           "No fue posible descargar la fuente configurada."
       },
-      { status: 502 }
+      {
+        status: 502,
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
     );
   }
 };
