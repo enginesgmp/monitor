@@ -528,6 +528,14 @@ function delayChip(v){
   const cls=v<0?"positive":v===0?"zero":v<=15?"warning":"critical";
   return `<span class="delay-chip ${cls}">${fmtPct(v)} · ${delayLabel(v)}</span>`;
 }
+function todayIso(){
+  const now=new Date();
+  const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+function isActiveOverdue(item){
+  return isActiveStatus(item)&&!!item.fechaCierreEsperada&&item.fechaCierreEsperada<todayIso();
+}
 const clsStatus=s=>"s-"+s.replaceAll(" ","-");
 
 function unique(key){return [...new Set(DATA.map(x=>x[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"es"));}
@@ -572,7 +580,7 @@ function filterByKpi(index){
     x=>x.estado==="EN BACKLOG",
     x=>x.estado!=="PRIME"&&isActiveStatus(x)&&x.avance!=null,
     x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0,
-    x=>isActiveStatus(x)&&x.atraso!=null&&x.atraso>0
+    x=>isActiveOverdue(x)
   ];
   activeKpiFilter=rules[index]||null;
   applyFilters();
@@ -590,8 +598,8 @@ function render(){
   const avgAv=avg(activeUnits.map(x=>x.avance));
   const atrasoCerrado=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000).length;
   const atrasoCerradoNoAceptable=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
-  const atrasoEnCurso=units.filter(x=>(x.estado==="EN CURSO"||x.estado==="EN PRUEBAS")&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000).length;
-  const atrasoEnCursoNoAceptable=units.filter(x=>(x.estado==="EN CURSO"||x.estado==="EN PRUEBAS")&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
+  const atrasoEnCurso=units.filter(x=>isActiveOverdue(x)).length;
+  const atrasoEnCursoNoAceptable=units.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
   const anomal=filtered.filter(x=>x.anomalias.length).length;
   $("kpis").innerHTML=[
     ["Actividades computables",units.length,"#0b5f99",`${primeCount} PRIME · ${total} registros totales`],
@@ -600,7 +608,7 @@ function render(){
     ["Backlog",backlog,"#64748b",units.length?`${Math.round(backlog/units.length*100)}% de actividades`:"—"],
     ["Avance en ejecución",avgAv==null?"—":fmtPct(avgAv),"#7c3aed","Promedio solo de actividades activas"],
     ["Desviación cerrada",atrasoCerrado,"#7c3aed",`${atrasoCerradoNoAceptable} atrasos críticos`],
-    ["Desviación en curso",atrasoEnCurso,"#b91c1c",`${atrasoEnCursoNoAceptable} atrasos críticos`]
+    ["En curso atrasadas",atrasoEnCurso,"#b91c1c",`${atrasoEnCursoNoAceptable} críticas calculadas`]
   ].map((x,i)=>`<div class="kpi" style="--accent:${x[2]};cursor:pointer" onclick="filterByKpi(${i})"><span>${x[0]}</span><b>${x[1]}</b><small>${x[3]}</small></div>`).join("");
 
   renderStatus(); renderBars("ownerBars","responsable",8); renderBars("areaBars","area",8); renderMetrics(); renderQuality(); renderTable();
@@ -622,7 +630,7 @@ function renderMetrics(){
   const withTasks=units.filter(x=>x.tareasDefinidas!=null&&x.tareasRealizadas!=null);
   const completion=withTasks.length?avg(withTasks.map(x=>x.tareasDefinidas?x.tareasRealizadas/x.tareasDefinidas*100:null)):null;
   const validClosedDelay=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
-  const validOpenDelay=units.filter(x=>(x.estado==="EN CURSO"||x.estado==="EN PRUEBAS")&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
+  const validOpenDelay=units.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
   const avgClosedDelay=avg(validClosedDelay.map(x=>x.atraso));
   const avgOpenDelay=avg(validOpenDelay.map(x=>x.atraso));
   const closedWithDate=units.filter(x=>x.estado==="CERRADO"&&x.fechaCierreReal).length;
