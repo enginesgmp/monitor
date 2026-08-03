@@ -974,18 +974,19 @@ async function refreshRemoteTeam(team,force=false){
     return processRemoteWorkbook(team,payload);
   }catch(error){
     console.error(`Error actualizando ${team}:`,error);
+    const errorMessage=error?.message||"fuente no disponible";
     restoreRemoteState(team);
     const el=$(team==="tecnologia"?"remoteTecnologia":"remoteTransformacion");
     if(el){
       const text=el.querySelector(".source-text");
       const previous=text?.textContent||"";
       if(previous.includes("última copia válida")){
-        text.textContent=`${previous} · fuente no disponible`;
+        text.textContent=`${previous} · error: ${errorMessage}`;
       }else{
-        setRemoteState(team,"error",error.message);
+        setRemoteState(team,"error",errorMessage);
       }
     }
-    return {error:error.message};
+    return {error:true,team,message:errorMessage};
   }
 }
 async function refreshRemoteSources(force=false){
@@ -1001,7 +1002,7 @@ async function refreshRemoteSources(force=false){
     ]);
     const errors=[transformacion,tecnologia].filter(x=>x&&x.error);
     $("remoteNote").textContent=errors.length
-      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error.`
+      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
       :`Información actualizada correctamente: ${new Date().toLocaleString("es-EC")}.`;
   }finally{
     showRemoteLoading(false);
