@@ -15,6 +15,12 @@ Esta versión consulta automáticamente dos archivos Excel públicos alojados en
 - No se eliminan registros ausentes del Excel.
 - Si una fuente falla, se conserva la última copia válida en el navegador.
 
+## Vista Gerencial de Tecnología
+
+La Vista Gerencial de Tecnología usa una clasificación independiente llamada `dimension`, leída desde la columna `Dimensión` de la hoja `DATOS`. Se aceptan los encabezados `DIMENSIÓN`, `DIMENSION`, `Dimensión` y `Dimension`.
+
+Si el endpoint o el Excel de Tecnología no entrega la columna, el portal marca el registro como `SIN DIMENSIÓN`. No se infiere la dimensión desde nombre, área, responsable ni descripción, y no se reutilizan macrofrentes de Transformación.
+
 ## Publicación manual en Netlify
 
 1. Comprima o cargue toda esta carpeta, no solo `index.html`.
