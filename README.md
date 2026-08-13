@@ -17,9 +17,11 @@ Esta versión consulta automáticamente dos archivos Excel públicos alojados en
 
 ## Vista Gerencial de Tecnología
 
-La Vista Gerencial de Tecnología usa una clasificación independiente llamada `dimension`, leída desde la columna `Dimensión` de la hoja `DATOS`. Se aceptan los encabezados `DIMENSIÓN`, `DIMENSION`, `Dimensión` y `Dimension`.
+La Vista Gerencial de Tecnología usa una clasificación independiente llamada `dimension`. En el CSV oficial de TI se lee desde la columna `MACRO`; en cargas Excel heredadas se aceptan `DIMENSIÓN`, `DIMENSION`, `Dimensión` y `Dimension`.
 
-Si el endpoint o el Excel de Tecnología no entrega la columna, el portal marca el registro como `SIN DIMENSIÓN`. No se infiere la dimensión desde nombre, área, responsable ni descripción, y no se reutilizan macrofrentes de Transformación.
+El CSV oficial debe contener, como mínimo, `N PROYECTO`, `RESPONSABLE ÁREA`, `DEPARTAMENTO ORIGEN`, `NOMBRE PROYECTO`, `MACRO`, `RESPONSABLE SISTEMAS`, `ESTADO PROYECTO`, `TICKETS DE PROYECTO`, `TICKETS COMPLETADOS`, `% DE AVANCE`, `INICIO DEL LEVANTAMIENTO (FECHA)`, `ENTREGA ESTIMADA DEL PROYECTO (FECHA)` y `ULTIMO MOTIVO DE RETRASO`.
+
+Para proyectos cerrados de Tecnología sin fecha real de cierre en la fuente CSV, el portal conserva `fechaCierreReal = null` y no inventa atraso de cierre; el atraso ejecutivo se calcula solo para proyectos abiertos con fecha de inicio y entrega estimada. Si `MACRO` llega vacío, el portal marca `SIN DIMENSIÓN`. No se infiere la dimensión desde nombre, área, responsable ni descripción, y no se reutilizan macrofrentes de Transformación.
 
 ## Publicación manual en Netlify
 
