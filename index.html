@@ -1394,13 +1394,13 @@ function parseCsvRows(text){
   if(preview.trim().startsWith(",,,,,,")){
     throw new Error("Fuente TI inválida: se recibió una hoja vacía o contenido separado por comas, no el CSV oficial TI.");
   }
-  if(!/N\s*PROYECTO\s*;/i.test(preview)){
-    throw new Error("Fuente TI inválida: no inicia con el encabezado oficial separado por punto y coma.");
-  }
+  if(!/N\s*PROYECTO\s*[;,]/i.test(preview)){
+  throw new Error("Fuente TI inválida: no inicia con el encabezado oficial.");
+}
 
   const source=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
   const lines=source.split("\n").filter(line=>line.trim());
-  const delimiter=";";
+  const delimiter=preview.includes(";")?";":",";
   const headers=splitCsvLine(lines[0],delimiter).map(cell=>excelText(cell));
   const diagnostics={detectedDelimiter:delimiter,parsedHeaders:headers,columnCount:headers.length,rowCount:Math.max(0,lines.length-1)};
 
