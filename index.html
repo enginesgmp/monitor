@@ -1281,16 +1281,112 @@ async function fetchRemoteSource(team,force=false){
   const workbook=XLSX.read(buffer,{type:"array",cellDates:true});
   return {kind:"excel",workbook,fileName,modified,fileId,contentType};
 }
+function splitCsvLine(line,delimiter){
+  const cells=[];
+  let current="";
+  let quoted=false;
+  for(let i=0;i<String(line||"").length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(quoted&&line[i+1]==='"'){
+        current+='"';
+        i++;
+      }else{
+        quoted=!quoted;
+      }
+    }else if(ch===delimiter&&!quoted){
+      cells.push(current);
+      current="";
+    }else{
+      current+=ch;
+    }
+  }
+  cells.push(current);
+  return cells;
+}
+function delimiterLabel(delimiter){return delimiter==="\t"?"TAB":delimiter;}
+function technologyHeaderAliases(){
+  return {
+    secuencia:["SECUENCIA","N PROYECTO","N° PROYECTO","NPROYECTO"],
+    lider:["LIDER","LÍDER","RESPONSABLE ÁREA","RESPONSABLE AREA"],
+    area:["AREA","ÁREA","DEPARTAMENTO ORIGEN"],
+    iniciativa:["INICIATIVA","NOMBRE PROYECTO"],
+    dimension:["DIMENSION","DIMENSIÓN","MACRO"],
+    responsable:["RESPONSABLE","RESPONSABLE SISTEMAS"],
+    estado:["ESTADO PROYECTO","ESTADO1","ESTADO"],
+    tareasDefinidas:["TICKETS DE PROYECTO"],
+    tareasRealizadas:["TICKETS COMPLETADOS"],
+    avance:["% DE AVANCE","PORCENTAJE DE AVANCE"],
+    fechaInicio:["INICIO DEL LEVANTAMIENTO (FECHA)"],
+    fechaCierreEsperada:["ENTREGA ESTIMADA DEL PROYECTO (FECHA)"],
+    motivoAtraso:["ULTIMO MOTIVO DE RETRASO","ÚLTIMO MOTIVO DE RETRASO"]
+  };
+}
+function canonicalHeaderMap(parsedHeaders){
+  const aliases=technologyHeaderAliases();
+  const normalizedHeaders=parsedHeaders.map(normalizeExcelHeader);
+  const canonicalHeaders={};
+  for(const [field,names] of Object.entries(aliases)){
+    const normalizedAliases=names.map(normalizeExcelHeader);
+    const foundIndex=normalizedHeaders.findIndex(header=>normalizedAliases.includes(header));
+    if(foundIndex>=0)canonicalHeaders[field]=parsedHeaders[foundIndex];
+  }
+  return {normalizedHeaders,canonicalHeaders};
+}
+function technologyHeaderScore(headers){
+  const {canonicalHeaders}=canonicalHeaderMap(headers);
+  return ["secuencia","iniciativa","responsable","estado"].filter(k=>canonicalHeaders[k]).length + Object.keys(canonicalHeaders).length/100;
+}
+function detectCsvTable(text){
+  const source=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
+  const lines=source.split("\n").filter(line=>line.trim());
+  const delimiters=[",",";","\t"];
+  let best=null;
+  for(let lineIndex=0;lineIndex<Math.min(lines.length,12);lineIndex++){
+    const rawLine=lines[lineIndex];
+    for(const delimiter of delimiters){
+      const parsedHeaders=splitCsvLine(rawLine,delimiter).map(cell=>excelText(cell));
+      const score=technologyHeaderScore(parsedHeaders);
+      if(parsedHeaders.length>1&&score>=3&&(!best||score>best.score||parsedHeaders.length>best.parsedHeaders.length)){
+        best={lineIndex,rawHeaderLine:rawLine,detectedDelimiter:delimiter,parsedHeaders,score};
+      }
+    }
+  }
+  if(!best){
+    const rawHeaderLine=lines[0]||"";
+    const detectedDelimiter=[",",";","\t"].sort((a,b)=>splitCsvLine(rawHeaderLine,b).length-splitCsvLine(rawHeaderLine,a).length)[0]||",";
+    const parsedHeaders=splitCsvLine(rawHeaderLine,detectedDelimiter).map(cell=>excelText(cell));
+    best={lineIndex:0,rawHeaderLine,detectedDelimiter,parsedHeaders,score:0};
+  }
+  const {normalizedHeaders,canonicalHeaders}=canonicalHeaderMap(best.parsedHeaders);
+  const rows=[];
+  for(let i=best.lineIndex+1;i<lines.length;i++){
+    const cells=splitCsvLine(lines[i],best.detectedDelimiter);
+    if(!cells.some(cell=>excelText(cell)))continue;
+    const row={};
+    best.parsedHeaders.forEach((header,index)=>{row[header]=cells[index]??"";});
+    rows.push(row);
+  }
+  return {
+    rows,
+    diagnostics:{
+      rawHeaderLine:best.rawHeaderLine,
+      detectedDelimiter:delimiterLabel(best.detectedDelimiter),
+      parsedHeaders:best.parsedHeaders,
+      normalizedHeaders,
+      canonicalHeaders,
+      columnCount:best.parsedHeaders.length
+    }
+  };
+}
 function parseCsvRows(text){
-  const workbook=XLSX.read(text,{type:"string",raw:false});
-  const sheetName=workbook.SheetNames[0];
-  if(!sheetName)return [];
-  return XLSX.utils.sheet_to_json(workbook.Sheets[sheetName],{defval:null,raw:false,blankrows:false});
+  return detectCsvTable(text).rows;
 }
 function processRemoteSource(team,payload){
     let mapped;
     if(team==="tecnologia"&&payload.kind==="csv"){
-      mapped=mapTechnologyCsvRows(parseCsvRows(payload.text));
+      const parsed=detectCsvTable(payload.text);
+      mapped=mapTechnologyCsvRows(parsed.rows,parsed.diagnostics);
     }else{
       const sheetName=detectExcelSheet(payload.workbook,team);
       if(!sheetName)throw new Error('No se encontró la hoja obligatoria "DATOS".');
@@ -1383,6 +1479,9 @@ function repairMojibake(value){
 }
 function normalizeExcelHeader(value){
   return repairMojibake(value)
+    .replace(/^\uFEFF/,"")
+    .replace(/\u00A0/g," ")
+    .replace(/[\u200B-\u200D\u2060]/g,"")
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .trim().toUpperCase().replace(/\s+/g," ");
 }
@@ -1437,39 +1536,63 @@ function getMappedValue(row,headers,aliases){
   return null;
 }
 function repairSingleColumnCsvRows(rawRows){
-  if(!rawRows.length)return rawRows;
+  if(!rawRows.length)return {rows:rawRows,diagnostics:null};
   const firstKeys=Object.keys(rawRows[0]);
   const headerKey=firstKeys.find(key=>{
     const fixed=repairMojibake(key);
-    return /N\s*PROYECTO/i.test(fixed)&&fixed.includes(",");
+    return /N\s*PROYECTO|SECUENCIA/i.test(fixed)&&/[;,\t]/.test(fixed);
   });
-  if(!headerKey)return rawRows;
+  if(!headerKey)return {rows:rawRows,diagnostics:null};
   const lines=[headerKey,...rawRows.map(row=>excelText(row[headerKey])).filter(Boolean)];
-  return parseCsvRows(lines.join("\n"));
+  return detectCsvTable(lines.join("\n"));
 }
-function mapTechnologyCsvRows(rawRows){
-  rawRows=repairSingleColumnCsvRows(rawRows);
+function diagnosticText(diagnostics){
+  if(!diagnostics)return "Diagnóstico no disponible.";
+  return `Diagnóstico encabezado TI: ${JSON.stringify(diagnostics)}`;
+}
+function technologyStatusScore(value){
+  const status=normalizeTechnologyStatus(value);
+  return ["EN BACKLOG","EN CURSO","EN PRUEBAS","PAUSA","CERRADO"].includes(status)?1:0;
+}
+function chooseTechnologyStateKey(rows,headers){
+  const estado1=headers[normalizeExcelHeader("ESTADO1")];
+  const estadoProyecto=headers[normalizeExcelHeader("ESTADO PROYECTO")];
+  const estado=headers[normalizeExcelHeader("ESTADO")];
+  const candidates=[estadoProyecto,estado1,estado].filter(Boolean);
+  if(!candidates.length)return null;
+  return candidates.map(key=>({
+    key,
+    score:rows.slice(0,8).reduce((sum,row)=>sum+technologyStatusScore(row[key]),0)
+  })).sort((a,b)=>b.score-a.score)[0].key;
+}
+function mapTechnologyCsvRows(rawRows,sourceDiagnostics=null){
+  const repaired=repairSingleColumnCsvRows(rawRows);
+  if(repaired.diagnostics){
+    rawRows=repaired.rows;
+    sourceDiagnostics=repaired.diagnostics;
+  }
   const rows=rawRows.filter(row=>Object.values(row).some(v=>excelText(v)));
   if(!rows.length)return {records:[],errors:["El CSV no contiene datos."]};
-  const headers=Object.keys(rows[0]).reduce((acc,key)=>{acc[normalizeExcelHeader(key)]=key;return acc;},{});
-  const aliases={
-    secuencia:["N PROYECTO","SECUENCIA"],
-    lider:["RESPONSABLE ÁREA","RESPONSABLE AREA","LIDER"],
-    area:["DEPARTAMENTO ORIGEN","AREA","ÁREA"],
-    iniciativa:["NOMBRE PROYECTO","INICIATIVA"],
-    dimension:["MACRO","DIMENSION","DIMENSIÓN"],
-    responsable:["RESPONSABLE SISTEMAS","RESPONSABLE"],
-    estado:["ESTADO PROYECTO","ESTADO1","ESTADO"],
-    tareasDefinidas:["TICKETS DE PROYECTO"],
-    tareasRealizadas:["TICKETS COMPLETADOS"],
-    avance:["% DE AVANCE","PORCENTAJE DE AVANCE"],
-    fechaInicio:["INICIO DEL LEVANTAMIENTO (FECHA)"],
-    fechaCierreEsperada:["ENTREGA ESTIMADA DEL PROYECTO (FECHA)"],
-    motivoAtraso:["ULTIMO MOTIVO DE RETRASO","ÚLTIMO MOTIVO DE RETRASO"]
+  const parsedHeaders=Object.keys(rows[0]);
+  const headers=parsedHeaders.reduce((acc,key)=>{acc[normalizeExcelHeader(key)]=key;return acc;},{});
+  const aliases=technologyHeaderAliases();
+  const {normalizedHeaders,canonicalHeaders}=canonicalHeaderMap(parsedHeaders);
+  const stateKey=chooseTechnologyStateKey(rows,headers);
+  if(stateKey)headers[normalizeExcelHeader("ESTADO PROYECTO")]=stateKey;
+  const diagnostics=sourceDiagnostics||{
+    rawHeaderLine:parsedHeaders.join(" | "),
+    detectedDelimiter:"objeto",
+    parsedHeaders,
+    normalizedHeaders,
+    canonicalHeaders:{...canonicalHeaders,estado:stateKey||canonicalHeaders.estado},
+    columnCount:parsedHeaders.length
   };
+  diagnostics.normalizedHeaders=diagnostics.normalizedHeaders||normalizedHeaders;
+  diagnostics.canonicalHeaders={...(diagnostics.canonicalHeaders||canonicalHeaders),estado:stateKey||canonicalHeaders.estado};
+  diagnostics.columnCount=diagnostics.columnCount||parsedHeaders.length;
   const required=["secuencia","lider","area","iniciativa","responsable","estado"];
   const missing=required.filter(k=>!aliases[k].some(name=>headers[normalizeExcelHeader(name)]));
-  if(missing.length)return {records:[],errors:[`Faltan columnas obligatorias en CSV TI: ${missing.join(", ")}.`]};
+  if(missing.length)return {records:[],errors:[`Faltan columnas obligatorias en CSV TI: ${missing.join(", ")}. ${diagnosticText(diagnostics)}`]};
   const errors=[];
   const records=[];
   const seen=new Set();
@@ -1643,7 +1766,8 @@ function prepareExcelImport(event){
       let mapped;
       let sheetName="CSV";
       if(isCsv){
-        mapped=mapTechnologyCsvRows(parseCsvRows(String(e.target.result||"").replace(/^﻿/,"")));
+        const parsed=detectCsvTable(String(e.target.result||"").replace(/^﻿/,""));
+        mapped=mapTechnologyCsvRows(parsed.rows,parsed.diagnostics);
       }else{
         const workbook=XLSX.read(e.target.result,{type:"array",cellDates:true});
         sheetName=detectExcelSheet(workbook,activeTeam);
