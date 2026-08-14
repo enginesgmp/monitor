@@ -1436,7 +1436,17 @@ function getMappedValue(row,headers,aliases){
   }
   return null;
 }
+function repairSingleColumnCsvRows(rawRows){
+  if(!rawRows.length)return rawRows;
+  const firstKeys=Object.keys(rawRows[0]);
+  const headerLine=firstKeys.length===1?firstKeys[0]:"";
+  const looksLikeCsvHeader=/N\s*PROYECTO/i.test(repairMojibake(headerLine))&&headerLine.includes(",");
+  if(!looksLikeCsvHeader)return rawRows;
+  const lines=[headerLine,...rawRows.map(row=>excelText(row[firstKeys[0]])).filter(Boolean)];
+  return parseCsvRows(lines.join("\n"));
+}
 function mapTechnologyCsvRows(rawRows){
+  rawRows=repairSingleColumnCsvRows(rawRows);
   const rows=rawRows.filter(row=>Object.values(row).some(v=>excelText(v)));
   if(!rows.length)return {records:[],errors:["El CSV no contiene datos."]};
   const headers=Object.keys(rows[0]).reduce((acc,key)=>{acc[normalizeExcelHeader(key)]=key;return acc;},{});
