@@ -1874,7 +1874,7 @@ function prepareExcelImport(event){
       let mapped;
       let sheetName="CSV";
       if(isCsv){
-        cmapped=parseTechnologyCsv(String(e.target.result||"").replace(/^﻿/,""));
+        mapped=parseTechnologyCsv(String(e.target.result||"").replace(/^﻿/,""));
       }else{
         const workbook=XLSX.read(e.target.result,{type:"array",cellDates:true});
         sheetName=detectExcelSheet(workbook,activeTeam);
