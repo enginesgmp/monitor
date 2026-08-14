@@ -1453,13 +1453,13 @@ function mapTechnologyCsvRows(rawRows){
   if(!rows.length)return {records:[],errors:["El CSV no contiene datos."]};
   const headers=Object.keys(rows[0]).reduce((acc,key)=>{acc[normalizeExcelHeader(key)]=key;return acc;},{});
   const aliases={
-    secuencia:["N PROYECTO"],
-    lider:["RESPONSABLE ÁREA","RESPONSABLE AREA"],
-    area:["DEPARTAMENTO ORIGEN"],
-    iniciativa:["NOMBRE PROYECTO"],
-    dimension:["MACRO"],
-    responsable:["RESPONSABLE SISTEMAS"],
-    estado:["ESTADO PROYECTO"],
+    secuencia:["N PROYECTO","SECUENCIA"],
+    lider:["RESPONSABLE ÁREA","RESPONSABLE AREA","LIDER"],
+    area:["DEPARTAMENTO ORIGEN","AREA","ÁREA"],
+    iniciativa:["NOMBRE PROYECTO","INICIATIVA"],
+    dimension:["MACRO","DIMENSION","DIMENSIÓN"],
+    responsable:["RESPONSABLE SISTEMAS","RESPONSABLE"],
+    estado:["ESTADO PROYECTO","ESTADO1","ESTADO"],
     tareasDefinidas:["TICKETS DE PROYECTO"],
     tareasRealizadas:["TICKETS COMPLETADOS"],
     avance:["% DE AVANCE","PORCENTAJE DE AVANCE"],
