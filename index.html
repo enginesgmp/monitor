@@ -1371,12 +1371,22 @@ async function refreshRemoteSources(force=false){
 
 let pendingExcelImport=null;
 
+function repairMojibake(value){
+  const text=String(value??"");
+  if(!/[ÃÂ\u0080-\u009F]/.test(text))return text;
+  try{
+    const bytes=Uint8Array.from([...text].map(ch=>ch.charCodeAt(0)&255));
+    return new TextDecoder("utf-8",{fatal:false}).decode(bytes);
+  }catch(e){
+    return text;
+  }
+}
 function normalizeExcelHeader(value){
-  return String(value??"")
+  return repairMojibake(value)
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .trim().toUpperCase().replace(/\s+/g," ");
 }
-function excelText(value){return value==null?"":String(value).trim();}
+function excelText(value){return value==null?"":repairMojibake(value).trim();}
 function excelNumber(value){
   if(value==null||value==="")return null;
   const n=Number(String(value).replace(",","."));
