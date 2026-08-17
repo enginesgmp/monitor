@@ -1919,100 +1919,6 @@ function detectExcelSheet(workbook,team=activeTeam){
 function technologyCsvDiagnostic(diagnostics){
   return `Diagnóstico CSV TI: ${JSON.stringify(diagnostics)}`;
 }
-function validateTechnologyDownloadedText(text,fileName=""){
-  const preview=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").slice(0,150).replace(/[\r\n]+/g," ");
-  console.info("CSV TI remoto · primeros 150 caracteres:",preview);
-  const compact=preview.trim();
-  if(!compact)throw new Error(`Fuente TI inválida: archivo vacío. ${technologyCsvDiagnostic({fileName,preview})}`);
-  if(/^</.test(compact)||/^\{/.test(compact)||/^\[/.test(compact)){
-    throw new Error(`Fuente TI inválida: la descarga no parece ser CSV oficial. ${technologyCsvDiagnostic({fileName,preview})}`);
-  }
-  if(/^,+$/.test(compact.replace(/\s/g,""))||compact.startsWith(",,,,,,")){
-    throw new Error(`Fuente TI inválida: encabezado vacío o separado por comas. ${technologyCsvDiagnostic({fileName,preview})}`);
-  }
-  if(!/N\s*PROYECTO\s*;/i.test(compact)){
-    throw new Error(`Fuente TI inválida: no inicia con el encabezado oficial separado por punto y coma. ${technologyCsvDiagnostic({fileName,preview})}`);
-  }
-}
-function parseTechnologyCsv(text){
-  validateTechnologyDownloadedText(text);
-  const source=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
-  const lines=source.split("\n").filter(line=>line.trim());
-  const delimiter=";";
-  const headerIndex=lines.findIndex(line=>{
-    const headers=splitCsvLine(line,delimiter).map(cell=>normalizeExcelHeader(cell));
-    return headers.includes(normalizeExcelHeader("N PROYECTO"))&&headers.includes(normalizeExcelHeader("RESPONSABLE ÁREA"));
-  });
-  if(headerIndex<0){
-    throw new Error(`No se encontró la cabecera oficial del CSV TI. ${technologyCsvDiagnostic({detectedDelimiter:delimiter,parsedHeaders:[],columnCount:0,rowCount:0})}`);
-  }
-  const parsedHeaders=splitCsvLine(lines[headerIndex],delimiter).map(cell=>excelText(cell));
-  const diagnostics={detectedDelimiter:delimiter,parsedHeaders,columnCount:parsedHeaders.length,rowCount:0};
-  if(parsedHeaders.length!==17){
-    throw new Error(`CSV TI inválido: se detectaron ${parsedHeaders.length} columnas; se esperaban 17. ${technologyCsvDiagnostic(diagnostics)}`);
-  }
-  const headerByNormalized=parsedHeaders.reduce((acc,header)=>{acc[normalizeExcelHeader(header)]=header;return acc;},{});
-  const missing=requiredTechnologyCsvHeaders().filter(header=>!headerByNormalized[normalizeExcelHeader(header)]);
-  if(missing.length){
-    throw new Error(`Faltan columnas obligatorias en CSV TI oficial: ${missing.join(", ")}. ${technologyCsvDiagnostic(diagnostics)}`);
-  }
-  const keyFor=header=>headerByNormalized[normalizeExcelHeader(header)];
-  const columns=technologyCsvColumnMap();
-  const rows=[];
-  for(let i=headerIndex+1;i<lines.length;i++){
-    const cells=splitCsvLine(lines[i],delimiter);
-    if(!cells.some(cell=>excelText(cell)))continue;
-    const row={};
-    parsedHeaders.forEach((header,index)=>{row[header]=cells[index]??"";});
-    rows.push(row);
-  }
-  diagnostics.rowCount=rows.length;
-  const errors=[];
-  const records=[];
-  const seen=new Set();
-  rows.forEach((row,index)=>{
-    const line=headerIndex+index+2;
-    const code=canonicalCode(excelText(row[keyFor(columns.secuencia)]));
-    if(!code)return;
-    if(seen.has(normalizedCode(code))){errors.push(`Fila ${line}: código duplicado ${code}.`);return;}
-    seen.add(normalizedCode(code));
-    const tareasDef=excelNumber(row[keyFor(columns.tareasDefinidas)]);
-    const tareasReal=excelNumber(row[keyFor(columns.tareasRealizadas)]);
-    const avanceInformado=excelPercent(row[keyFor(columns.avance)]);
-    const rec=calculateImportedMetrics({
-      secuencia:code,
-      lider:excelText(row[keyFor(columns.lider)]),
-      area:excelText(row[keyFor(columns.area)]),
-      iniciativa:excelText(row[keyFor(columns.iniciativa)]),
-      dimension:excelText(row[keyFor(columns.dimension)])||SIN_DIMENSION,
-      etiquetaProyecto:excelText(row[keyFor(columns.etiquetaProyecto)]),
-      responsable:excelText(row[keyFor(columns.responsable)]),
-      estado:normalizeTechnologyStatus(excelText(row[keyFor(columns.estado)])),
-      tareasDefinidas:tareasDef,
-      tareasRealizadas:tareasReal,
-      avance:avanceInformado,
-      fechaInicio:excelDate(row[keyFor(columns.fechaInicio)]),
-      fechaCierreEsperada:excelDate(row[keyFor(columns.fechaCierreEsperada)]),
-      fechaCierreReal:null,
-      diasEsperados:null,
-      diasReales:null,
-      atraso:null,
-      motivoAtraso:excelText(row[keyFor(columns.motivoAtraso)]),
-      beneficioEsperado:"",
-      beneficioReal:"",
-      objetivo:"",
-      alcance:"",
-      anomalias:[],
-      historial:[]
-    },"tecnologia");
-    records.push(rec);
-  });
-  console.info("CSV TI parseado",diagnostics);
-  return {records,errors,diagnostics};
-}
-function parseCsvRows(text){
-  return parseTechnologyCsv(text).records;
-}
 function getMappedValue(row,headers,aliases){
   for(const name of aliases){
     const key=headers[normalizeExcelHeader(name)];
@@ -2022,7 +1928,7 @@ function getMappedValue(row,headers,aliases){
 }
 function mapTechnologyCsvRows(rawRowsOrText){
   if(typeof rawRowsOrText==="string")return parseTechnologyCsv(rawRowsOrText);
-  return {records:[],errors:["La integración TI ahora exige el CSV oficial en texto con delimitador punto y coma."]};
+  return {records:[],errors:["La integración TI exige el CSV oficial en texto con encabezados reconocibles."]};
 }
 function mapExcelRows(rawRows,team=activeTeam){
   if(!rawRows.length)return {records:[],errors:["La hoja no contiene datos."]};
