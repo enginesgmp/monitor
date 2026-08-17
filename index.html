@@ -1495,7 +1495,7 @@ function parseCsvRows(text){
   return detectCsvTable(text).rows;
 }
 
-  function parseTechnologyCsv(text){
+function parseTechnologyCsv(text){
   const preview=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").slice(0,150).replace(/[\r\n]+/g," ");
   console.info("CSV TI remoto · primeros 150 caracteres:",preview);
 
@@ -1504,35 +1504,23 @@ function parseCsvRows(text){
     throw new Error("Fuente TI inválida: la descarga no parece ser CSV oficial.");
   }
   if(preview.trim().startsWith(",,,,,,")){
-    throw new Error("Fuente TI inválida: se recibió una hoja vacía o contenido separado por comas, no el CSV oficial TI.");
-  }
-  if(!/N\s*PROYECTO\s*[;,]/i.test(preview)){
-  throw new Error("Fuente TI inválida: no inicia con el encabezado oficial.");
-}
-
-  const source=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
-  const lines=source.split("\n").filter(line=>line.trim());
-  const delimiter=preview.includes(";")?";":",";
-  const headers=splitCsvLine(lines[0],delimiter).map(cell=>excelText(cell));
-  const diagnostics={detectedDelimiter:delimiter,parsedHeaders:headers,columnCount:headers.length,rowCount:Math.max(0,lines.length-1)};
-
-  if(headers.length!==17){
-    throw new Error(`CSV TI inválido: se detectaron ${headers.length} columnas; se esperaban 17. Diagnóstico CSV TI: ${JSON.stringify(diagnostics)}`);
+    throw new Error("Fuente TI inválida: se recibió una hoja vacía o contenido separado por comas sin encabezados válidos.");
   }
 
-  const byHeader=headers.reduce((acc,header)=>{acc[normalizeExcelHeader(header)]=header;return acc;},{});
+  const table=detectCsvTable(text);
+  const rows=table.rows;
+  const diagnostics={...table.diagnostics,rowCount:rows.length};
+  const byField=table.diagnostics.canonicalHeaders||{};
   const required=[
-    "N PROYECTO","RESPONSABLE ÁREA","DEPARTAMENTO ORIGEN","NOMBRE PROYECTO","MACRO",
-    "RESPONSABLE SISTEMAS","ESTADO PROYECTO","TICKETS DE PROYECTO","TICKETS COMPLETADOS",
-    "% DE AVANCE","INICIO DEL LEVANTAMIENTO (FECHA)","ENTREGA ESTIMADA DEL PROYECTO (FECHA)",
-    "ULTIMO MOTIVO DE RETRASO"
+    "secuencia","lider","area","iniciativa","dimension","responsable","estado",
+    "tareasDefinidas","tareasRealizadas","avance","fechaInicio","fechaCierreEsperada","motivoAtraso"
   ];
-  const missing=required.filter(header=>!byHeader[normalizeExcelHeader(header)]);
+  const missing=required.filter(field=>!byField[field]);
   if(missing.length){
     throw new Error(`Faltan columnas obligatorias en CSV TI oficial: ${missing.join(", ")}. Diagnóstico CSV TI: ${JSON.stringify(diagnostics)}`);
   }
 
-  const key=name=>byHeader[normalizeExcelHeader(name)];
+  const key=field=>byField[field];
   const parseTechNumber=value=>{
     if(value==null||value==="")return null;
     const n=Number(String(value).replace("%","").replace(",",".").trim());
@@ -1556,39 +1544,34 @@ function parseCsvRows(text){
   const records=[];
   const seen=new Set();
 
-  lines.slice(1).forEach((line,index)=>{
-    const cells=splitCsvLine(line,delimiter);
-    if(!cells.some(cell=>excelText(cell)))return;
-    const row={};
-    headers.forEach((header,i)=>{row[header]=cells[i]??"";});
-
-    const code=canonicalCode(excelText(row[key("N PROYECTO")]));
+  rows.forEach((row,index)=>{
+    const code=canonicalCode(excelText(row[key("secuencia")]));
     if(!code)return;
     if(seen.has(normalizedCode(code))){errors.push(`Fila ${index+2}: código duplicado ${code}.`);return;}
     seen.add(normalizedCode(code));
 
-    const tareasDef=parseTechNumber(row[key("TICKETS DE PROYECTO")]);
-    const tareasReal=parseTechNumber(row[key("TICKETS COMPLETADOS")]);
+    const tareasDef=parseTechNumber(row[key("tareasDefinidas")]);
+    const tareasReal=parseTechNumber(row[key("tareasRealizadas")]);
 
     records.push(calculateImportedMetrics({
       secuencia:code,
-      lider:excelText(row[key("RESPONSABLE ÁREA")]),
-      area:excelText(row[key("DEPARTAMENTO ORIGEN")]),
-      iniciativa:excelText(row[key("NOMBRE PROYECTO")]),
-      dimension:excelText(row[key("MACRO")])||SIN_DIMENSION,
-      etiquetaProyecto:excelText(row[key("ETIQUETA PROYECTO")]),
-      responsable:excelText(row[key("RESPONSABLE SISTEMAS")]),
-      estado:normalizeTechnologyStatus(row[key("ESTADO PROYECTO")]),
+      lider:excelText(row[key("lider")]),
+      area:excelText(row[key("area")]),
+      iniciativa:excelText(row[key("iniciativa")]),
+      dimension:excelText(row[key("dimension")])||SIN_DIMENSION,
+      etiquetaProyecto:excelText(row[byField.etiquetaProyecto]),
+      responsable:excelText(row[key("responsable")]),
+      estado:normalizeTechnologyStatus(row[key("estado")]),
       tareasDefinidas:tareasDef,
       tareasRealizadas:tareasReal,
-      avance:tareasDef>0?null:parseTechProgress(row[key("% DE AVANCE")]),
-      fechaInicio:parseTechDate(row[key("INICIO DEL LEVANTAMIENTO (FECHA)")]),
-      fechaCierreEsperada:parseTechDate(row[key("ENTREGA ESTIMADA DEL PROYECTO (FECHA)")]),
+      avance:tareasDef>0?null:parseTechProgress(row[key("avance")]),
+      fechaInicio:parseTechDate(row[key("fechaInicio")]),
+      fechaCierreEsperada:parseTechDate(row[key("fechaCierreEsperada")]),
       fechaCierreReal:null,
       diasEsperados:null,
       diasReales:null,
       atraso:null,
-      motivoAtraso:excelText(row[key("ULTIMO MOTIVO DE RETRASO")]),
+      motivoAtraso:excelText(row[key("motivoAtraso")]),
       beneficioEsperado:"",
       beneficioReal:"",
       objetivo:"",
@@ -1605,7 +1588,7 @@ function parseCsvRows(text){
 function processRemoteSource(team,payload){
     let mapped;
    if(team==="tecnologia"){
-      if(payload.kind!=="csv")throw new Error("La fuente de Tecnología debe ser el CSV oficial separado por punto y coma.");
+      if(payload.kind!=="csv")throw new Error("La fuente de Tecnología debe ser el CSV oficial.");
       mapped=parseTechnologyCsv(payload.text);
     }else{
       const sheetName=detectExcelSheet(payload.workbook,team);
@@ -1789,7 +1772,7 @@ function delimiterLabel(delimiter){return delimiter==="\t"?"TAB":delimiter;}
 function processRemoteSource(team,payload){
     let mapped;
     if(team==="tecnologia"){
-      if(payload.kind!=="csv")throw new Error("La fuente de Tecnología debe ser el CSV oficial separado por punto y coma.");
+      if(payload.kind!=="csv")throw new Error("La fuente de Tecnología debe ser el CSV oficial.");
       mapped=parseTechnologyCsv(payload.text);
     }else{
       const sheetName=detectExcelSheet(payload.workbook,team);
