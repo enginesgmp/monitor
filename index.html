@@ -158,8 +158,9 @@ body.tecnologia-active .transform-only-field{display:none!important}
 .mgmt-num{width:31px;height:31px;border-radius:7px;background:linear-gradient(135deg,#0b62c6,#06409a);color:#fff;display:grid;place-items:center;font-weight:950;font-size:18px}
 .mgmt-name{margin:2px 0 10px;font-size:20px}
 .mgmt-state{display:inline-flex;justify-content:center;min-width:118px;border-radius:9px;padding:9px 18px;color:#fff;font-weight:950}.mgmt-state.green{background:#22c55e}.mgmt-state.amber{background:#f0a000}.mgmt-state.red{background:#ed1c24}.mgmt-state.nodata{background:#94a3b8}
-.mgmt-mini{display:flex;gap:12px;align-items:center}.mgmt-mini div{border-left:1px solid #dfe7f0;padding-left:12px;min-width:92px}.mgmt-mini span{font-size:11px;color:#25364f}.mgmt-mini b{display:block;font-size:18px;margin-top:2px}
+.mgmt-mini{display:grid;grid-template-columns:repeat(5,minmax(86px,1fr));gap:10px;align-items:center}.mgmt-mini div{border-left:1px solid #dfe7f0;padding-left:10px;min-width:0}.mgmt-mini span{font-size:10px;color:#25364f;text-transform:uppercase;font-weight:900}.mgmt-mini b{display:block;font-size:17px;margin-top:2px}
 .mgmt-rows{margin-top:8px}.mgmt-row{display:grid;grid-template-columns:185px 1fr;gap:12px;border-top:1px solid #e3eaf2;padding:9px 0;font-size:13px}.mgmt-row:first-child{border-top:0}.mgmt-row-label{font-weight:900}.mgmt-hit{display:inline-block;margin-right:7px;color:#0a3d8f;font-weight:900;text-decoration:none}.mgmt-hit:hover{text-decoration:underline}
+.mgmt-restrictions{display:grid;gap:8px}.mgmt-restriction{border-left:3px solid #f0a000;padding-left:10px}.mgmt-restriction b{display:block;color:#0b2b61}.mgmt-more{color:#52627a;font-weight:900}
 .mgmt-quick{margin-top:16px;display:grid;grid-template-columns:230px 1fr;gap:10px;align-items:center;padding:14px 18px;border-color:#bcd7f5;background:#f8fbff}
 .mgmt-quick-title{display:flex;gap:12px;align-items:center;font-size:18px;font-weight:950;color:#0b2b61}.mgmt-quick ul{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0;padding-left:18px;color:#12213b}
 .unclassified-link{border:0;background:transparent;color:#0645a8;font-weight:950;padding:0;text-decoration:underline;cursor:pointer}
@@ -677,7 +678,105 @@ function setDimensionSelectOptions(id,includeEmpty=true,includeUnclassified=fals
   if(el)el.innerHTML=dimensionOptionsHtml(includeEmpty,includeUnclassified);
 }
 function activeTransformacionUnits(rows=DATA){
-  return managementUnits(rows).filter(x=>x.estado==="EN CURSO");
+  return managementUnits(rows).filter(isTransformacionActive);
+}
+function isTransformacionActive(item){
+  return item.estado==="EN CURSO";
+}
+function hasValidDelay(item){
+  return item.atraso!=null&&Math.abs(item.atraso)<=1000;
+}
+function isTransformacionDelayedActive(item){
+  return isTransformacionActive(item)&&hasValidDelay(item)&&item.atraso>0;
+}
+function isTransformacionCriticalActive(item){
+  return isTransformacionDelayedActive(item)&&item.atraso>15;
+}
+function parseIsoDate(value){
+  if(!value)return null;
+  const d=new Date(String(value).slice(0,10)+"T00:00:00");
+  return Number.isNaN(d.getTime())?null:d;
+}
+function expectedProgress(item,calculationDate=todayIso()){
+  const start=parseIsoDate(item.fechaInicio);
+  const end=parseIsoDate(item.fechaCierreEsperada);
+  const calc=parseIsoDate(calculationDate);
+  if(!start||!end||!calc||end<=start)return null;
+  if(calc<start)return 0;
+  if(calc>end)return 100;
+  return Math.max(0,Math.min(100,((calc-start)/(end-start))*100));
+}
+function isTransformacionComparable(item,calculationDate=todayIso()){
+  return isTransformacionActive(item)&&item.estado!=="PRIME"&&Number.isFinite(effectiveProgress(item))&&expectedProgress(item,calculationDate)!=null;
+}
+function transformacionProgressSummary(rows,calculationDate=todayIso()){
+  const comparable=rows.filter(x=>isTransformacionComparable(x,calculationDate));
+  const realAverage=avg(comparable.map(effectiveProgress));
+  const expectedAverage=avg(comparable.map(x=>expectedProgress(x,calculationDate)));
+  const gap=realAverage==null||expectedAverage==null?null:realAverage-expectedAverage;
+  return {comparable,comparableCodes:comparable.map(x=>x.secuencia),realAverage,expectedAverage,gap};
+}
+function fmtPp(v){
+  if(v==null)return "—";
+  const rounded=Math.round(v*10)/10;
+  return `${rounded>0?"+":""}${rounded} pp`;
+}
+function gapStatus(gap){
+  if(gap==null)return {label:"SIN DATO",cls:"nodata"};
+  if(gap>=0)return {label:"EN LÍNEA",cls:"green"};
+  if(gap>=-10)return {label:"DESVIACIÓN",cls:"amber"};
+  return {label:"EN RIESGO",cls:"red"};
+}
+function isResolvedRestrictionText(text){
+  return /\((solucionad[oa]|realizad[oa]|resuelt[oa]|cerrad[oa])\)/i.test(String(text||""));
+}
+function restrictionCandidates(activeRows){
+  return [...activeRows]
+    .filter(x=>String(x.motivoAtraso||"").trim()&&!isResolvedRestrictionText(x.motivoAtraso))
+    .sort((a,b)=>{
+      const aCrit=isTransformacionCriticalActive(a)?1:0;
+      const bCrit=isTransformacionCriticalActive(b)?1:0;
+      if(aCrit!==bCrit)return bCrit-aCrit;
+      if((a.atraso??-9999)!==(b.atraso??-9999))return (b.atraso??-9999)-(a.atraso??-9999);
+      const aReason=String(a.motivoAtraso||"").trim()?1:0;
+      const bReason=String(b.motivoAtraso||"").trim()?1:0;
+      if(aReason!==bReason)return bReason-aReason;
+      return String(a.fechaCierreEsperada||"9999-12-31").localeCompare(String(b.fechaCierreEsperada||"9999-12-31"));
+    });
+}
+function executiveRestrictions(activeRows,limit=3){
+  const candidates=restrictionCandidates(activeRows);
+  return {visible:candidates.slice(0,limit),additional:Math.max(0,candidates.length-limit),total:candidates.length};
+}
+function renderExecutiveRestrictions(summary){
+  if(!summary.visible.length)return "Sin restricción vigente";
+  const body=summary.visible.map(x=>`<div class="mgmt-restriction"><b>${esc(x.secuencia)} — ${esc(x.iniciativa)}</b><span>${esc(x.motivoAtraso)}</span></div>`).join("");
+  const more=summary.additional?`<div class="mgmt-more">+ ${summary.additional} restricciones adicionales</div>`:"";
+  return `<div class="mgmt-restrictions">${body}${more}</div>`;
+}
+function transformacionManagementReconciliation(rows=DATA){
+  const activeRows=activeTransformacionUnits(rows);
+  const operationalDelayed=activeRows.filter(isTransformacionDelayedActive);
+  const operationalCritical=activeRows.filter(isTransformacionCriticalActive);
+  const managementRows=DIMENSION_CATALOG.flatMap(dimension=>activeRows.filter(x=>dimensionInfo(x,rows).value===dimension));
+  const managementDelayed=managementRows.filter(isTransformacionDelayedActive);
+  const managementCritical=managementRows.filter(isTransformacionCriticalActive);
+  const codes=arr=>[...new Set(arr.map(x=>x.secuencia))].sort((a,b)=>a.localeCompare(b,"es",{numeric:true}));
+  const diff=(a,b)=>a.filter(x=>!b.includes(x));
+  const operationalDelayedCodes=codes(operationalDelayed);
+  const managementDelayedCodes=codes(managementDelayed);
+  const operationalCriticalCodes=codes(operationalCritical);
+  const managementCriticalCodes=codes(managementCritical);
+  return {
+    operationalDelayedCodes,
+    managementDelayedCodes,
+    operationalCriticalCodes,
+    managementCriticalCodes,
+    missingDelayedInManagement:diff(operationalDelayedCodes,managementDelayedCodes),
+    extraDelayedInManagement:diff(managementDelayedCodes,operationalDelayedCodes),
+    missingCriticalInManagement:diff(operationalCriticalCodes,managementCriticalCodes),
+    extraCriticalInManagement:diff(managementCriticalCodes,operationalCriticalCodes)
+  };
 }
 function activeTechnologyUnits(rows=DATA){
   return rows.filter(x=>isActiveStatus(x,"tecnologia"));
@@ -735,41 +834,54 @@ function renderTransformacionManagementView(){
   const el=$("managementView");
   if(!el||activeTeam!=="transformacion")return;
   const rows=DATA;
+  const calculationDate=todayIso();
   const total=rows.length;
   const classified=rows.filter(x=>!isDimensionUnclassified(x)).length;
   const activeRows=activeTransformacionUnits(rows);
   const unclassified=rows.filter(isDimensionUnclassified);
+  const reconciliation=transformacionManagementReconciliation(rows);
   const activeByDimension=DIMENSION_CATALOG.map((dimension,index)=>{
     const active=activeRows.filter(x=>dimensionInfo(x,rows).value===dimension);
-    const avgAv=avg(active.map(x=>x.avance));
-    const critical=active.filter(x=>x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
+    const progress=transformacionProgressSummary(active,calculationDate);
+    const delayed=active.filter(isTransformacionDelayedActive).length;
+    const critical=active.filter(isTransformacionCriticalActive).length;
     const status=dimensionStatus(active);
     const hits=focusHits(active);
-    const restrictions=uniqueRestrictions(active);
-    return {dimension,index,active,avgAv,critical,status,hits,restrictions};
+    const restrictions=executiveRestrictions(active);
+    return {dimension,index,active,progress,delayed,critical,status,hits,restrictions};
   });
   const maxActive=activeByDimension.reduce((best,item)=>item.active.length>best.active.length?item:best,activeByDimension[0]);
-  const totalCritical=activeRows.filter(x=>x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
+  const totalDelayed=reconciliation.operationalDelayedCodes.length;
+  const totalCritical=reconciliation.operationalCriticalCodes.length;
+  const managementDelayed=reconciliation.managementDelayedCodes.length;
+  const managementCritical=reconciliation.managementCriticalCodes.length;
   const withoutActive=activeByDimension.filter(x=>!x.active.length).length;
+  const hasReconciliationGap=reconciliation.missingDelayedInManagement.length||reconciliation.extraDelayedInManagement.length||reconciliation.missingCriticalInManagement.length||reconciliation.extraCriticalInManagement.length;
+  if(hasReconciliationGap)console.warn("Diagnóstico reconciliación Transformación",reconciliation);
   const cardHtml=activeByDimension.map(item=>`
     <article class="mgmt-card ${item.index===4?"wide":""}" onclick="openDimensionDetail('${esc(item.dimension)}')">
       <div class="mgmt-card-head">
         <div class="mgmt-num">${item.index+1}</div>
         <div>
-          <h2 class="mgmt-name">${esc(item.dimension)}</h2>
+          <h2 class="mgmt-name">${esc(item.dimension.toUpperCase())}</h2>
           <span class="mgmt-state ${item.status.cls}">${item.status.label}</span>
         </div>
         <div class="mgmt-mini">
           <div><span>Activas</span><b>${item.active.length}</b></div>
-          <div><span>Avance promedio</span><b>${item.avgAv==null?"—":fmtPct(item.avgAv)}</b></div>
-          <div><span>Atrasos críticos activos</span><b>${item.critical}</b></div>
+          <div><span>Avance real</span><b>${item.progress.realAverage==null?"—":fmtPct(item.progress.realAverage)}</b></div>
+          <div><span>Avance esperado</span><b>${item.progress.expectedAverage==null?"—":fmtPct(item.progress.expectedAverage)}</b></div>
+          <div><span>Brecha</span><b class="${item.progress.gap==null?"muted":item.progress.gap<0?"delay-critical":"ok"}">${fmtPp(item.progress.gap)}</b></div>
+          <div><span>Atrasadas / críticas</span><b>${item.delayed} / ${item.critical}</b></div>
         </div>
       </div>
       <div class="mgmt-rows">
         <div class="mgmt-row"><div class="mgmt-row-label">Hitos foco</div><div>${item.hits.length?item.hits.map(x=>`<a class="mgmt-hit" href="#" title="${esc(x.iniciativa)}" onclick="event.stopPropagation();event.preventDefault();openDetail(decodeURIComponent('${encodeURIComponent(x.secuencia)}'))">${esc(x.secuencia)}</a>`).join(" · "):"Sin hitos activos"}</div></div>
-        <div class="mgmt-row"><div class="mgmt-row-label">Restricción principal</div><div>${item.restrictions.length?item.restrictions.map(esc).join("<br>"):"Sin restricción registrada"}</div></div>
+        <div class="mgmt-row"><div class="mgmt-row-label">Restricciones prioritarias</div><div>${renderExecutiveRestrictions(item.restrictions)}</div></div>
       </div>
     </article>`).join("");
+  const reconciliationText=hasReconciliationGap
+    ?`Diferencias detectadas. Faltantes gerencia: atrasadas ${reconciliation.missingDelayedInManagement.join(", ")||"—"}; críticas ${reconciliation.missingCriticalInManagement.join(", ")||"—"}. Sobrantes gerencia: atrasadas ${reconciliation.extraDelayedInManagement.join(", ")||"—"}; críticas ${reconciliation.extraCriticalInManagement.join(", ")||"—"}.`
+    :`Reconciliado con Vista Operativa: atrasadas ${totalDelayed} / ${managementDelayed}; críticas ${totalCritical} / ${managementCritical}.`;
   el.innerHTML=`
     <div class="mgmt-head">
       <div class="mgmt-title">
@@ -789,8 +901,8 @@ function renderTransformacionManagementView(){
       <div class="mgmt-quick-title"><div class="mgmt-icon">↯</div><span>Lectura rápida para Dirección</span></div>
       <ul>
         <li>Mayor concentración del portafolio activo: ${esc(maxActive?.dimension||"Sin dato")} (${maxActive?.active.length||0}).</li>
-        <li>Atrasos críticos activos: ${totalCritical}.</li>
-        <li>Macrofrentes sin actividad en curso: ${withoutActive}; registros fuera de taxonomía o sin dimensión: ${unclassified.length}.</li>
+        <li>Atrasadas / críticas activas: ${totalDelayed} / ${totalCritical}.</li>
+        <li>${esc(reconciliationText)}</li>
       </ul>
     </section>`;
 }
@@ -912,7 +1024,7 @@ function filterByKpi(index){
     x=>x.estado==="EN BACKLOG",
     x=>x.estado!=="PRIME"&&isActiveStatus(x)&&x.avance!=null,
     x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0,
-    x=>isActiveOverdue(x)
+    x=>activeTeam==="transformacion"?isTransformacionDelayedActive(x):isActiveOverdue(x)
   ];
   activeKpiFilter=rules[index]||null;
   applyFilters();
@@ -930,8 +1042,8 @@ function render(){
   const avgAv=avg(activeUnits.map(x=>x.avance));
   const atrasoCerrado=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000).length;
   const atrasoCerradoNoAceptable=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
-  const atrasoEnCurso=units.filter(x=>isActiveOverdue(x)).length;
-  const atrasoEnCursoNoAceptable=units.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000).length;
+  const atrasoEnCurso=units.filter(x=>activeTeam==="transformacion"?isTransformacionDelayedActive(x):isActiveOverdue(x)).length;
+  const atrasoEnCursoNoAceptable=units.filter(x=>activeTeam==="transformacion"?isTransformacionCriticalActive(x):(isActiveOverdue(x)&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000)).length;
   const anomal=filtered.filter(x=>x.anomalias.length).length;
   $("kpis").innerHTML=[
     ["Actividades computables",units.length,"#0b5f99",`${primeCount} PRIME · ${total} registros totales`],
@@ -962,7 +1074,7 @@ function renderMetrics(){
   const withTasks=units.filter(x=>x.tareasDefinidas!=null&&x.tareasRealizadas!=null);
   const completion=withTasks.length?avg(withTasks.map(x=>x.tareasDefinidas?x.tareasRealizadas/x.tareasDefinidas*100:null)):null;
   const validClosedDelay=units.filter(x=>x.estado==="CERRADO"&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
-  const validOpenDelay=units.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
+  const validOpenDelay=units.filter(x=>activeTeam==="transformacion"?isTransformacionDelayedActive(x):(isActiveOverdue(x)&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000));
   const avgClosedDelay=avg(validClosedDelay.map(x=>x.atraso));
   const avgOpenDelay=avg(validOpenDelay.map(x=>x.atraso));
   const closedWithDate=units.filter(x=>x.estado==="CERRADO"&&x.fechaCierreReal).length;
@@ -1596,13 +1708,14 @@ function normalizeExcelHeader(value){
 function excelText(value){return value==null?"":repairMojibake(value).trim();}
 function excelNumber(value){
   if(value==null||value==="")return null;
-  const n=Number(String(value).replace(",","."));
+  const clean=String(value).replace("%","").replace(",",".").trim();
+  const n=Number(clean);
   return Number.isFinite(n)?n:null;
 }
 function excelPercent(value){
   const n=excelNumber(value);
   if(n==null)return null;
-  return Math.abs(n)<=10?n*100:n;
+  return Math.abs(n)<=1?n*100:n;
 }
 function excelDate(value){
   if(value==null||value==="")return null;
@@ -1614,7 +1727,7 @@ function excelDate(value){
   const s=String(value).trim();
   const iso=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(iso)return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
-  const latam=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  const latam=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+.*)?$/);
   if(latam)return `${latam[3]}-${latam[2].padStart(2,"0")}-${latam[1].padStart(2,"0")}`;
   const d=new Date(s);
   return isNaN(d)?null:d.toISOString().slice(0,10);
@@ -1636,101 +1749,272 @@ function detectExcelSheet(workbook,team=activeTeam){
   );
   return found||null;
 }
-function getMappedValue(row,headers,aliases){
-  for(const name of aliases){
-    const key=headers[normalizeExcelHeader(name)];
-    if(key)return row[key];
-  }
-  return null;
-}
-function repairSingleColumnCsvRows(rawRows){
-  if(!rawRows.length)return {rows:rawRows,diagnostics:null};
-  const firstKeys=Object.keys(rawRows[0]);
-  const headerKey=firstKeys.find(key=>{
-    const fixed=repairMojibake(key);
-    return /N\s*PROYECTO|SECUENCIA/i.test(fixed)&&/[;,\t]/.test(fixed);
-  });
-  if(!headerKey)return {rows:rawRows,diagnostics:null};
-  const lines=[headerKey,...rawRows.map(row=>excelText(row[headerKey])).filter(Boolean)];
-  return detectCsvTable(lines.join("\n"));
-}
-function diagnosticText(diagnostics){
-  if(!diagnostics)return "Diagnóstico no disponible.";
-  return `Diagnóstico encabezado TI: ${JSON.stringify(diagnostics)}`;
-}
-function technologyStatusScore(value){
-  const status=normalizeTechnologyStatus(value);
-  return ["EN BACKLOG","EN CURSO","EN PRUEBAS","PAUSA","CERRADO"].includes(status)?1:0;
-}
-function chooseTechnologyStateKey(rows,headers){
-  const estado1=headers[normalizeExcelHeader("ESTADO1")];
-  const estadoProyecto=headers[normalizeExcelHeader("ESTADO PROYECTO")];
-  const estado=headers[normalizeExcelHeader("ESTADO")];
-  const candidates=[estadoProyecto,estado1,estado].filter(Boolean);
-  if(!candidates.length)return null;
-  return candidates.map(key=>({
-    key,
-    score:rows.slice(0,8).reduce((sum,row)=>sum+technologyStatusScore(row[key]),0)
-  })).sort((a,b)=>b.score-a.score)[0].key;
-}
-function mapTechnologyCsvRows(rawRows,sourceDiagnostics=null){
-  const repaired=repairSingleColumnCsvRows(rawRows);
-  if(repaired.diagnostics){
-    rawRows=repaired.rows;
-    sourceDiagnostics=repaired.diagnostics;
-  }
-  const rows=rawRows.filter(row=>Object.values(row).some(v=>excelText(v)));
-  if(!rows.length)return {records:[],errors:["El CSV no contiene datos."]};
-  const parsedHeaders=Object.keys(rows[0]);
-  const headers=parsedHeaders.reduce((acc,key)=>{acc[normalizeExcelHeader(key)]=key;return acc;},{});
-  const aliases=technologyHeaderAliases();
-  const {normalizedHeaders,canonicalHeaders}=canonicalHeaderMap(parsedHeaders);
-  const stateKey=chooseTechnologyStateKey(rows,headers);
-  if(stateKey)headers[normalizeExcelHeader("ESTADO PROYECTO")]=stateKey;
-  const diagnostics=sourceDiagnostics||{
-    rawHeaderLine:parsedHeaders.join(" | "),
-    detectedDelimiter:"objeto",
-    parsedHeaders,
-    normalizedHeaders,
-    canonicalHeaders:{...canonicalHeaders,estado:stateKey||canonicalHeaders.estado},
-    columnCount:parsedHeaders.length
+function technologyCsvColumnMap(){
+  return {
+    secuencia:"N PROYECTO",
+    lider:"RESPONSABLE ÁREA",
+    area:"DEPARTAMENTO ORIGEN",
+    iniciativa:"NOMBRE PROYECTO",
+    dimension:"MACRO",
+    etiquetaProyecto:"ETIQUETA PROYECTO",
+    responsable:"RESPONSABLE SISTEMAS",
+    estado:"ESTADO PROYECTO",
+    tareasDefinidas:"TICKETS DE PROYECTO",
+    tareasRealizadas:"TICKETS COMPLETADOS",
+    avance:"% DE AVANCE",
+    fechaInicio:"INICIO DEL LEVANTAMIENTO (FECHA)",
+    fechaCierreEsperada:"ENTREGA ESTIMADA DEL PROYECTO (FECHA)",
+    motivoAtraso:"ULTIMO MOTIVO DE RETRASO"
   };
-  diagnostics.normalizedHeaders=diagnostics.normalizedHeaders||normalizedHeaders;
-  diagnostics.canonicalHeaders={...(diagnostics.canonicalHeaders||canonicalHeaders),estado:stateKey||canonicalHeaders.estado};
-  diagnostics.columnCount=diagnostics.columnCount||parsedHeaders.length;
-  const required=["secuencia","lider","area","iniciativa","responsable","estado"];
-  const missing=required.filter(k=>!aliases[k].some(name=>headers[normalizeExcelHeader(name)]));
-  if(missing.length)return {records:[],errors:[`Faltan columnas obligatorias en CSV TI: ${missing.join(", ")}. ${diagnosticText(diagnostics)}`]};
+}
+function requiredTechnologyCsvHeaders(){
+  const map=technologyCsvColumnMap();
+  return [
+    map.secuencia,
+    map.lider,
+    map.area,
+    map.iniciativa,
+    map.dimension,
+    map.responsable,
+    map.estado,
+    map.tareasDefinidas,
+    map.tareasRealizadas,
+    map.avance,
+    map.fechaInicio,
+    map.fechaCierreEsperada,
+    map.motivoAtraso
+  ];
+}
+function delimiterLabel(delimiter){return delimiter==="\t"?"TAB":delimiter;}
+function processRemoteSource(team,payload){
+    let mapped;
+    if(team==="tecnologia"){
+      if(payload.kind!=="csv")throw new Error("La fuente de Tecnología debe ser el CSV oficial separado por punto y coma.");
+      mapped=parseTechnologyCsv(payload.text);
+    }else{
+      const sheetName=detectExcelSheet(payload.workbook,team);
+      if(!sheetName)throw new Error('No se encontró la hoja obligatoria "DATOS".');
+      const rows=XLSX.utils.sheet_to_json(payload.workbook.Sheets[sheetName],{defval:null,raw:true});
+      mapped=mapExcelRows(rows,team);
+    }
+    if(mapped.errors.length){
+      throw new Error(mapped.errors.slice(0,3).join(" | "));
+    }
+    if(!mapped.records.length)throw new Error("La fuente no contiene registros válidos.");
+    const result=mergeRemoteRecords(team,mapped.records,payload.fileName);
+    const when=new Date().toLocaleString("es-EC");
+    localStorage.setItem(`remote_sync_${team}`,JSON.stringify({
+      fecha:new Date().toISOString(),
+      fileName:payload.fileName,
+      modified:payload.modified,
+      fileId:payload.fileId,
+      kind:payload.kind,
+      result
+    }));
+    setRemoteState(
+      team,
+      "ok",
+      `${when} · ${result.total} registros${payload.fileId?` · ${payload.fileId.slice(-6)}`:""}`
+    );
+    return result;
+}
+function restoreRemoteState(team){
+  try{
+    const info=JSON.parse(localStorage.getItem(`remote_sync_${team}`)||"null");
+    if(info&&info.fecha){
+      setRemoteState(team,"ok",`${new Date(info.fecha).toLocaleString("es-EC")} · última copia válida`);
+      return;
+    }
+  }catch(e){}
+  setRemoteState(team,"error","sin actualización");
+}
+async function refreshRemoteTeam(team,force=false){
+  try{
+    const payload=await fetchRemoteSource(team,force);
+    return processRemoteSource(team,payload);
+  }catch(error){
+    console.error(`Error actualizando ${team}:`,error);
+    const errorMessage=error?.message||"fuente no disponible";
+    restoreRemoteState(team);
+    const el=$(team==="tecnologia"?"remoteTecnologia":"remoteTransformacion");
+    if(el){
+      const text=el.querySelector(".source-text");
+      const previous=text?.textContent||"";
+      if(previous.includes("última copia válida")){
+        text.textContent=`${previous} · error: ${errorMessage}`;
+      }else{
+        setRemoteState(team,"error",errorMessage);
+      }
+    }
+    return {error:true,team,message:errorMessage};
+  }
+}
+async function refreshRemoteSources(force=false){
+  if(typeof XLSX==="undefined"){
+    alert("No fue posible cargar el lector de archivos.");
+    return;
+  }
+  showRemoteLoading(true,force?"Forzando actualización de ambas fuentes...":"Actualizando información...");
+  try{
+    const [transformacion,tecnologia]=await Promise.all([
+      refreshRemoteTeam("transformacion",force),
+      refreshRemoteTeam("tecnologia",force)
+    ]);
+    const errors=[transformacion,tecnologia].filter(x=>x&&x.error);
+    $("remoteNote").textContent=errors.length
+      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
+      :`Información actualizada correctamente: ${new Date().toLocaleString("es-EC")}.`;
+  }finally{
+    showRemoteLoading(false);
+  }
+}
+
+pendingExcelImport=null;
+
+function repairMojibake(value){
+  const text=String(value??"");
+  if(!/[ÃÂ\u0080-\u009F]/.test(text))return text;
+  try{
+    const bytes=Uint8Array.from([...text].map(ch=>ch.charCodeAt(0)&255));
+    return new TextDecoder("utf-8",{fatal:false}).decode(bytes);
+  }catch(e){
+    return text;
+  }
+}
+function normalizeExcelHeader(value){
+  return repairMojibake(value)
+    .replace(/^\uFEFF/,"")
+    .replace(/\u00A0/g," ")
+    .replace(/[\u200B-\u200D\u2060]/g,"")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .trim().toUpperCase().replace(/\s+/g," ");
+}
+function excelText(value){return value==null?"":repairMojibake(value).trim();}
+function excelNumber(value){
+  if(value==null||value==="")return null;
+  const clean=String(value).replace("%","").replace(",",".").trim();
+  const n=Number(clean);
+  return Number.isFinite(n)?n:null;
+}
+function excelPercent(value){
+  const n=excelNumber(value);
+  if(n==null)return null;
+  return Math.abs(n)<=1?n*100:n;
+}
+function excelDate(value){
+  if(value==null||value==="")return null;
+  if(value instanceof Date&&!isNaN(value))return value.toISOString().slice(0,10);
+  if(typeof value==="number"){
+    const parsed=XLSX.SSF.parse_date_code(value);
+    if(parsed)return `${parsed.y}-${String(parsed.m).padStart(2,"0")}-${String(parsed.d).padStart(2,"0")}`;
+  }
+  const s=String(value).trim();
+  const iso=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(iso)return `${iso[1]}-${iso[2].padStart(2,"0")}-${iso[3].padStart(2,"0")}`;
+  const latam=s.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})(?:\s+.*)?$/);
+  if(latam)return `${latam[3]}-${latam[2].padStart(2,"0")}-${latam[1].padStart(2,"0")}`;
+  const d=new Date(s);
+  return isNaN(d)?null:d.toISOString().slice(0,10);
+}
+function daysBetween(a,b){
+  if(!a||!b)return null;
+  const start=new Date(`${a}T00:00:00`);
+  const end=new Date(`${b}T00:00:00`);
+  return Math.round((end-start)/86400000);
+}
+function calculateImportedMetrics(rec,team=activeTeam){
+  rec.secuencia=canonicalCode(rec.secuencia);
+  rec.estado=team==="tecnologia"?normalizeTechnologyStatus(rec.estado):normalizeStatus(rec.estado);
+  return team==="tecnologia"?calculateTechnologyMetrics(rec):calculateOperationalMetrics(rec);
+}
+function detectExcelSheet(workbook,team=activeTeam){
+  const found=workbook.SheetNames.find(
+    name=>normalizeExcelHeader(name)===normalizeExcelHeader("DATOS")
+  );
+  return found||null;
+}
+function technologyCsvDiagnostic(diagnostics){
+  return `Diagnóstico CSV TI: ${JSON.stringify(diagnostics)}`;
+}
+function validateTechnologyDownloadedText(text,fileName=""){
+  const preview=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").slice(0,150).replace(/[\r\n]+/g," ");
+  console.info("CSV TI remoto · primeros 150 caracteres:",preview);
+  const compact=preview.trim();
+  if(!compact)throw new Error(`Fuente TI inválida: archivo vacío. ${technologyCsvDiagnostic({fileName,preview})}`);
+  if(/^</.test(compact)||/^\{/.test(compact)||/^\[/.test(compact)){
+    throw new Error(`Fuente TI inválida: la descarga no parece ser CSV oficial. ${technologyCsvDiagnostic({fileName,preview})}`);
+  }
+  if(/^,+$/.test(compact.replace(/\s/g,""))||compact.startsWith(",,,,,,")){
+    throw new Error(`Fuente TI inválida: encabezado vacío o separado por comas. ${technologyCsvDiagnostic({fileName,preview})}`);
+  }
+  if(!/N\s*PROYECTO\s*;/i.test(compact)){
+    throw new Error(`Fuente TI inválida: no inicia con el encabezado oficial separado por punto y coma. ${technologyCsvDiagnostic({fileName,preview})}`);
+  }
+}
+function parseTechnologyCsv(text){
+  validateTechnologyDownloadedText(text);
+  const source=repairMojibake(String(text??"")).replace(/^\uFEFF/,"").replace(/\r\n?/g,"\n");
+  const lines=source.split("\n").filter(line=>line.trim());
+  const delimiter=";";
+  const headerIndex=lines.findIndex(line=>{
+    const headers=splitCsvLine(line,delimiter).map(cell=>normalizeExcelHeader(cell));
+    return headers.includes(normalizeExcelHeader("N PROYECTO"))&&headers.includes(normalizeExcelHeader("RESPONSABLE ÁREA"));
+  });
+  if(headerIndex<0){
+    throw new Error(`No se encontró la cabecera oficial del CSV TI. ${technologyCsvDiagnostic({detectedDelimiter:delimiter,parsedHeaders:[],columnCount:0,rowCount:0})}`);
+  }
+  const parsedHeaders=splitCsvLine(lines[headerIndex],delimiter).map(cell=>excelText(cell));
+  const diagnostics={detectedDelimiter:delimiter,parsedHeaders,columnCount:parsedHeaders.length,rowCount:0};
+  if(parsedHeaders.length!==17){
+    throw new Error(`CSV TI inválido: se detectaron ${parsedHeaders.length} columnas; se esperaban 17. ${technologyCsvDiagnostic(diagnostics)}`);
+  }
+  const headerByNormalized=parsedHeaders.reduce((acc,header)=>{acc[normalizeExcelHeader(header)]=header;return acc;},{});
+  const missing=requiredTechnologyCsvHeaders().filter(header=>!headerByNormalized[normalizeExcelHeader(header)]);
+  if(missing.length){
+    throw new Error(`Faltan columnas obligatorias en CSV TI oficial: ${missing.join(", ")}. ${technologyCsvDiagnostic(diagnostics)}`);
+  }
+  const keyFor=header=>headerByNormalized[normalizeExcelHeader(header)];
+  const columns=technologyCsvColumnMap();
+  const rows=[];
+  for(let i=headerIndex+1;i<lines.length;i++){
+    const cells=splitCsvLine(lines[i],delimiter);
+    if(!cells.some(cell=>excelText(cell)))continue;
+    const row={};
+    parsedHeaders.forEach((header,index)=>{row[header]=cells[index]??"";});
+    rows.push(row);
+  }
+  diagnostics.rowCount=rows.length;
   const errors=[];
   const records=[];
   const seen=new Set();
   rows.forEach((row,index)=>{
-    const line=index+2;
-    const code=canonicalCode(excelText(getMappedValue(row,headers,aliases.secuencia)));
+    const line=headerIndex+index+2;
+    const code=canonicalCode(excelText(row[keyFor(columns.secuencia)]));
     if(!code)return;
     if(seen.has(normalizedCode(code))){errors.push(`Fila ${line}: código duplicado ${code}.`);return;}
     seen.add(normalizedCode(code));
-    const tareasDef=excelNumber(getMappedValue(row,headers,aliases.tareasDefinidas));
-    const tareasReal=excelNumber(getMappedValue(row,headers,aliases.tareasRealizadas));
-    const avanceInformado=excelPercent(getMappedValue(row,headers,aliases.avance));
+    const tareasDef=excelNumber(row[keyFor(columns.tareasDefinidas)]);
+    const tareasReal=excelNumber(row[keyFor(columns.tareasRealizadas)]);
+    const avanceInformado=excelPercent(row[keyFor(columns.avance)]);
     const rec=calculateImportedMetrics({
       secuencia:code,
-      lider:excelText(getMappedValue(row,headers,aliases.lider)),
-      area:excelText(getMappedValue(row,headers,aliases.area)),
-      iniciativa:excelText(getMappedValue(row,headers,aliases.iniciativa)),
-      dimension:excelText(getMappedValue(row,headers,aliases.dimension))||SIN_DIMENSION,
-      responsable:excelText(getMappedValue(row,headers,aliases.responsable)),
-      estado:normalizeTechnologyStatus(excelText(getMappedValue(row,headers,aliases.estado))),
+      lider:excelText(row[keyFor(columns.lider)]),
+      area:excelText(row[keyFor(columns.area)]),
+      iniciativa:excelText(row[keyFor(columns.iniciativa)]),
+      dimension:excelText(row[keyFor(columns.dimension)])||SIN_DIMENSION,
+      etiquetaProyecto:excelText(row[keyFor(columns.etiquetaProyecto)]),
+      responsable:excelText(row[keyFor(columns.responsable)]),
+      estado:normalizeTechnologyStatus(excelText(row[keyFor(columns.estado)])),
       tareasDefinidas:tareasDef,
       tareasRealizadas:tareasReal,
       avance:avanceInformado,
-      fechaInicio:excelDate(getMappedValue(row,headers,aliases.fechaInicio)),
-      fechaCierreEsperada:excelDate(getMappedValue(row,headers,aliases.fechaCierreEsperada)),
+      fechaInicio:excelDate(row[keyFor(columns.fechaInicio)]),
+      fechaCierreEsperada:excelDate(row[keyFor(columns.fechaCierreEsperada)]),
       fechaCierreReal:null,
       diasEsperados:null,
       diasReales:null,
       atraso:null,
-      motivoAtraso:excelText(getMappedValue(row,headers,aliases.motivoAtraso)),
+      motivoAtraso:excelText(row[keyFor(columns.motivoAtraso)]),
       beneficioEsperado:"",
       beneficioReal:"",
       objetivo:"",
@@ -1738,15 +2022,24 @@ function mapTechnologyCsvRows(rawRows,sourceDiagnostics=null){
       anomalias:[],
       historial:[]
     },"tecnologia");
-    if(!rec.lider||!rec.area||!rec.iniciativa||!rec.responsable){
-      errors.push(`Fila ${line}: existen campos obligatorios vacíos en ${code}.`);
-    }
-    if(rec.estado==="CERRADO"&&rec.fechaInicio&&rec.fechaCierreEsperada&&!rec.fechaCierreReal){
-      rec.anomalias.push("Cerrada sin fecha real");
-    }
     records.push(rec);
   });
-  return {records,errors};
+  console.info("CSV TI parseado",diagnostics);
+  return {records,errors,diagnostics};
+}
+function parseCsvRows(text){
+  return parseTechnologyCsv(text).records;
+}
+function getMappedValue(row,headers,aliases){
+  for(const name of aliases){
+    const key=headers[normalizeExcelHeader(name)];
+    if(key)return row[key];
+  }
+  return null;
+}
+function mapTechnologyCsvRows(rawRowsOrText){
+  if(typeof rawRowsOrText==="string")return parseTechnologyCsv(rawRowsOrText);
+  return {records:[],errors:["La integración TI ahora exige el CSV oficial en texto con delimitador punto y coma."]};
 }
 function mapExcelRows(rawRows,team=activeTeam){
   if(!rawRows.length)return {records:[],errors:["La hoja no contiene datos."]};
