@@ -891,12 +891,6 @@ function renderTransformacionManagementView(){
       </div>
       <button class="unclassified-link" onclick="openUnclassifiedDetail()">Registros sin clasificar: ${unclassified.length}</button>
     </div>
-    <section class="mgmt-top">
-      <div class="mgmt-kpi"><div class="mgmt-icon">▦</div><div><span>Macrofrentes</span><b>${DIMENSION_CATALOG.length}</b></div></div>
-      <div class="mgmt-kpi"><div class="mgmt-icon">□</div><div><span>Registros clasificados</span><b>${classified} / ${total}</b></div></div>
-      <div class="mgmt-kpi"><div class="mgmt-icon">↗</div><div><span>Iniciativas activas</span><b>${activeRows.length}</b></div></div>
-      <div class="mgmt-legend"><b>Leyenda de plazo</b><div class="legend-row"><span class="legend-dot legend-green"></span>Verde = sin atraso</div><div class="legend-row"><span class="legend-dot legend-amber"></span>Ámbar = desviación tolerada</div><div class="legend-row"><span class="legend-dot legend-red"></span>Rojo = atraso crítico</div></div>
-    </section>
     <section class="mgmt-grid">${cardHtml}</section>
     <section class="mgmt-quick">
       <div class="mgmt-quick-title"><div class="mgmt-icon">↯</div><span>Lectura rápida para Dirección</span></div>
@@ -905,7 +899,14 @@ function renderTransformacionManagementView(){
         <li>Atrasadas activas: ${totalDelayed}; críticas activas: ${totalCritical}.</li>
         <li>${esc(reconciliationText)}</li>
       </ul>
-    </section>`;
+    </section>
+    <section class="mgmt-top">
+      <div class="mgmt-kpi"><div class="mgmt-icon">▦</div><div><span>Macrofrentes</span><b>${DIMENSION_CATALOG.length}</b></div></div>
+      <div class="mgmt-kpi"><div class="mgmt-icon">□</div><div><span>Registros clasificados</span><b>${classified} / ${total}</b></div></div>
+      <div class="mgmt-kpi"><div class="mgmt-icon">↗</div><div><span>Iniciativas activas</span><b>${activeRows.length}</b></div></div>
+      <div class="mgmt-legend"><b>Leyenda de plazo</b><div class="legend-row"><span class="legend-dot legend-green"></span>Verde = sin atraso</div><div class="legend-row"><span class="legend-dot legend-amber"></span>Ámbar = desviación tolerada</div><div class="legend-row"><span class="legend-dot legend-red"></span>Rojo = atraso crítico</div></div>
+    </section>
+    `;
 }
 function technologyRestriction(rows){
   const critical=focusHits(rows.filter(x=>x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000));
