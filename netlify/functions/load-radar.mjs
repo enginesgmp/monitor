@@ -128,13 +128,65 @@ function loginShape(login) {
   return Object.keys(login).slice(0, 8).join(",") || "objeto sin llaves";
 }
 
+function deepFindArray(root, keys, depth = 0, seen = new Set()) {
+  if (!root || typeof root !== "object" || depth > 6 || seen.has(root)) return [];
+  seen.add(root);
+  for (const key of keys) {
+    const value = root[key];
+    if (Array.isArray(value)) return value;
+    if (value && typeof value === "object") {
+      for (const nestedKey of ["rows", "data", "items", "values", "records"]) {
+        if (Array.isArray(value[nestedKey])) return value[nestedKey];
+      }
+    }
+  }
+  for (const value of Object.values(root)) {
+    const found = deepFindArray(value, keys, depth + 1, seen);
+    if (found.length) return found;
+  }
+  return [];
+}
+
+function deepFindObject(root, keys, depth = 0, seen = new Set()) {
+  if (!root || typeof root !== "object" || depth > 6 || seen.has(root)) return null;
+  seen.add(root);
+  for (const key of keys) {
+    const value = root[key];
+    if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  }
+  for (const value of Object.values(root)) {
+    const found = deepFindObject(value, keys, depth + 1, seen);
+    if (found) return found;
+  }
+  return null;
+}
+
+function numericKpi(kpis, names, fallback = 0) {
+  for (const name of names) {
+    const raw = kpis?.[name];
+    if (raw == null || raw === "") continue;
+    const parsed = Number(String(raw).replace(/[^0-9.-]/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function percentKpi(kpis, names, fallback = "0%") {
+  for (const name of names) {
+    const raw = kpis?.[name];
+    if (raw == null || raw === "") continue;
+    if (String(raw).includes("%")) return clean(raw);
+    const parsed = Number(String(raw).replace(/[^0-9.-]/g, ""));
+    if (Number.isFinite(parsed)) return `${Math.round(parsed)}%`;
+  }
+  return fallback;
+}
+
 function summarize(bootstrap) {
-  const processes = Array.isArray(bootstrap?.procesos)
-    ? bootstrap.procesos.filter(isActiveProcess)
-    : [];
-  const activities = Array.isArray(bootstrap?.actividades)
-    ? bootstrap.actividades
-    : [];
+  const source = bootstrap?.bootstrap || bootstrap?.payload || bootstrap?.data || bootstrap;
+  const processes = deepFindArray(source, ["procesos", "processes"]).filter(isActiveProcess);
+  const activities = deepFindArray(source, ["actividades", "activities"]);
+  const kpis = deepFindObject(source, ["kpis_admin", "kpis", "dashboard", "resumen", "metricas"]) || {};
 
   let activityTotal = 0;
   let activityClosed = 0;
@@ -149,7 +201,7 @@ function summarize(bootstrap) {
   let cerradoFueraPlazo = 0;
 
   for (const process of processes) {
-    const processId = clean(pick(process, ["proceso_id", "id", "codigo", "ID"]));
+    const processId = clean(pick(process, ["proceso_id", "id_proceso", "id", "codigo", "ID"]));
     const stats = activityStats(activities, processId);
     activityTotal += stats.total;
     activityClosed += stats.completed;
@@ -184,30 +236,39 @@ function summarize(bootstrap) {
     }
   }
 
-  const avance = activityTotal > 0
-    ? Math.round((activityClosed / activityTotal) * 100)
-    : Number(bootstrap?.kpis_admin?.avance_plan ?? 0);
+  const computedAdvance = activityTotal > 0
+    ? `${Math.round((activityClosed / activityTotal) * 100)}%`
+    : "0%";
 
   const runtimeDate =
+    dateValue(source?.runtime?.timestamp) ||
+    dateValue(source?.runtime?.generated_at) ||
     dateValue(bootstrap?.runtime?.timestamp) ||
     dateValue(bootstrap?.runtime?.generated_at) ||
     new Date();
+
+  const hasProcesses = processes.length > 0;
 
   return {
     source: "RADAR modulo 8",
     radarUrl: RADAR_URL,
     corte: runtimeDate.toLocaleString("es-EC", { timeZone: "America/Guayaquil" }),
-    procesosActivos: processes.length,
-    cerrados,
-    atrasados,
-    enCurso,
-    planificados,
-    avancePlan: `${Number.isFinite(avance) ? avance : 0}%`,
-    planificacionCompleta,
-    alertasMotor,
-    inicioTardio,
-    atrasadoNoIniciado,
-    cerradoFueraPlazo
+    procesosActivos: hasProcesses ? processes.length : numericKpi(kpis, ["procesos_activos", "procesosActivos", "activos", "total_procesos", "totalProcesos"]),
+    cerrados: hasProcesses ? cerrados : numericKpi(kpis, ["cerrados", "procesos_cerrados", "cerrado"]),
+    atrasados: hasProcesses ? atrasados : numericKpi(kpis, ["atrasados", "procesos_atrasados", "atrasado"]),
+    enCurso: hasProcesses ? enCurso : numericKpi(kpis, ["en_curso", "enCurso", "procesos_en_curso"]),
+    planificados: hasProcesses ? planificados : numericKpi(kpis, ["planificados", "procesos_planificados", "planificado"]),
+    avancePlan: hasProcesses ? computedAdvance : percentKpi(kpis, ["avance_plan", "avancePlan", "avance", "porcentaje_avance"], computedAdvance),
+    planificacionCompleta: hasProcesses ? planificacionCompleta : numericKpi(kpis, ["planificacion_completa", "planificacionCompleta"]),
+    alertasMotor: hasProcesses ? alertasMotor : numericKpi(kpis, ["alertas_motor", "alertasMotor", "alertas", "alertas_v3"]),
+    inicioTardio: hasProcesses ? inicioTardio : numericKpi(kpis, ["inicio_tardio", "inicioTardio"]),
+    atrasadoNoIniciado: hasProcesses ? atrasadoNoIniciado : numericKpi(kpis, ["atrasado_no_iniciado", "atrasadoNoIniciado"]),
+    cerradoFueraPlazo: hasProcesses ? cerradoFueraPlazo : numericKpi(kpis, ["cerrado_fuera_plazo", "cerradoFueraPlazo"]),
+    diagnostico: {
+      procesosDetectados: processes.length,
+      actividadesDetectadas: activities.length,
+      kpisDetectados: Object.keys(kpis).slice(0, 20)
+    }
   };
 }
 
