@@ -423,7 +423,8 @@ const STORAGE_KEYS={
   transformacion:"reporte_iniciativas_transformacion_v36",
   tecnologia:"reporte_iniciativas_tecnologia_v37"
 };
-const RADAR_GPP_SNAPSHOT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",corte:"2026-09-09 14:39:14",procesosActivos:59,cerrados:22,atrasados:31,enCurso:4,planificados:2,avancePlan:"62%",planificacionCompleta:34,alertasMotor:12,inicioTardio:2,atrasadoNoIniciado:8,cerradoFueraPlazo:2};
+const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null};
+let RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,status:"idle",message:"Pendiente de actualizar desde RADAR"};
 let activeTeam="transformacion";
 let activeTransformacionView="informe";
 
@@ -925,6 +926,28 @@ function openReportTarget(kind,value=""){
   };
   setReportFilters(options[kind]||{});
 }
+function radarDisplay(value){return value==null||value===""?"—":value;}
+async function refreshRadarGpp(force=false){
+  if(activeTeam!=="transformacion"&&!force)return null;
+  RADAR_GPP_STATE={...RADAR_GPP_STATE,status:"loading",message:"Actualizando información desde RADAR..."};
+  renderReportView();
+  try{
+    const response=await fetch("/.netlify/functions/load-radar?cacheBust="+Date.now(),{cache:"no-store"});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      throw new Error(payload?.message||"RADAR respondió "+response.status);
+    }
+    RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,...payload,status:"ok",message:"Actualizado desde RADAR"};
+    return RADAR_GPP_STATE;
+  }catch(error){
+    RADAR_GPP_STATE={...RADAR_GPP_STATE,status:"error",message:error?.message||"No fue posible actualizar RADAR"};
+    console.warn("No fue posible actualizar RADAR",error);
+    renderReportView();
+    return {error:true,team:"radar",message:RADAR_GPP_STATE.message};
+  }finally{
+    renderReportView();
+  }
+}
 function renderReportView(){
   const el=$("reportView");
   if(!el)return;
@@ -944,15 +967,21 @@ function renderReportView(){
   const topRisks=delayedRows.slice().sort((a,b)=>(b.atraso??-999)-(a.atraso??-999)).slice(0,5);
   const isTech=activeTeam==="tecnologia";
   const teamName=isTech?"Tecnología":"Transformación";
+  const radar=RADAR_GPP_STATE;
+  const radarStatus=radar.status==="ok"
+    ?`Fuente externa actualizada: ${esc(radar.source||"RADAR módulo 8")} · corte ${esc(radar.corte||"sin corte")}`
+    :radar.status==="loading"
+      ?"Actualizando información desde RADAR..."
+      :`RADAR pendiente/no disponible: ${esc(radar.message||"sin detalle")}`;
   const gpp=isTech?"":`
     <h2>Implementación Gestión por Procesos</h2>
     <div class="report-kpis">
-      <button class="report-kpi" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.procesosActivos}</b><span>Procesos activos RADAR</span></button>
-      <button class="report-kpi" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.avancePlan}</b><span>Avance del plan</span></button>
-      <button class="report-kpi alert" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.atrasados}</b><span>Procesos atrasados</span></button>
-      <button class="report-kpi gold" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.alertasMotor}</b><span>Alertas motor V3</span></button>
+      <button class="report-kpi" onclick="window.open('${radar.url}','_blank','noopener')"><b>${radarDisplay(radar.procesosActivos)}</b><span>Procesos activos RADAR</span></button>
+      <button class="report-kpi" onclick="window.open('${radar.url}','_blank','noopener')"><b>${radarDisplay(radar.avancePlan)}</b><span>Avance del plan</span></button>
+      <button class="report-kpi alert" onclick="window.open('${radar.url}','_blank','noopener')"><b>${radarDisplay(radar.atrasados)}</b><span>Procesos atrasados</span></button>
+      <button class="report-kpi gold" onclick="window.open('${radar.url}','_blank','noopener')"><b>${radarDisplay(radar.alertasMotor)}</b><span>Alertas motor V3</span></button>
     </div>
-    <p class="report-note">Fuente externa consultada: RADAR módulo 8 · último corte visible ${esc(RADAR_GPP_SNAPSHOT.corte)}. No se guardan credenciales en el monitor; el acceso abre el módulo oficial.</p>`;
+    <p class="report-note">${radarStatus}. No se guardan credenciales en el monitor; la lectura se realiza mediante variables de entorno de Netlify.</p>`;
   el.innerHTML=`
   <article class="report-onepager">
     <header>
@@ -1836,13 +1865,14 @@ async function refreshRemoteSources(force=false){
   }
   showRemoteLoading(true,force?"Forzando actualización de ambas fuentes...":"Actualizando información...");
   try{
-    const [transformacion,tecnologia]=await Promise.all([
+    const [transformacion,tecnologia,radar]=await Promise.all([
       refreshRemoteTeam("transformacion",force),
-      refreshRemoteTeam("tecnologia",force)
+      refreshRemoteTeam("tecnologia",force),
+      refreshRadarGpp(force)
     ]);
-    const errors=[transformacion,tecnologia].filter(x=>x&&x.error);
+    const errors=[transformacion,tecnologia,radar].filter(x=>x&&x.error);
     $("remoteNote").textContent=errors.length
-      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
+      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>x.team==="radar"?`RADAR: ${x.message||"error no especificado"}`:`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
       :`Información actualizada correctamente: ${new Date().toLocaleString("es-EC")}.`;
   }finally{
     showRemoteLoading(false);
