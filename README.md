@@ -45,3 +45,13 @@ Después de cambiar una variable, vuelva a desplegar el sitio.
 ## Limitación del piloto
 
 Los Excel son la fuente de lectura. Las ediciones realizadas dentro del portal todavía se guardan en el navegador y no escriben de regreso en OneDrive o SharePoint.
+## Integración RADAR módulo 8
+
+La pestaña **Informe** de Transformación consulta RADAR mediante la función `/.netlify/functions/load-radar` cada vez que se ejecuta **Actualizar todo** o la carga automática inicial.
+
+Configure estas variables en Netlify para habilitar la lectura dinámica sin guardar credenciales en el repositorio:
+
+- `RADAR_API_URL`
+- `RADAR_USERNAME`
+- `RADAR_PASSWORD`
+
