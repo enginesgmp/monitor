@@ -1044,11 +1044,18 @@ function renderRadarOnlyReport(el){
       return `<div class="${index>3?"light":""}" style="width:${width}%;background:${colors[index%colors.length]}"><span>${value||""}</span></div>`;
     }).join("")}</div><div class="report-keys">${items.map((item,index)=>`<span><i style="background:${colors[index%colors.length]}"></i>${item.label}</span>`).join("")}<span style="margin-left:auto;font-weight:700;color:#011e41">Suma ${total}</span></div>`;
   };
+  const hitoMeaning={"0 de 4":"por arrancar","1 de 4":"prework hecho","2 de 4":"en construcción","3 de 4":"por cerrar","4 de 4":"cerrado"};
   const funnel=(items)=>{
     const total=Math.max(...items.map(item=>Number(item.count??item.value)||0),1);
-    return `<div class="report-funnel">${items.map((item,index)=>{
+    const normalized=items.map(item=>({
+      ...item,
+      label:item.label==="0 de 4"?"Ningún hito":item.label,
+      meaning:hitoMeaning[item.label]||item.meaning||""
+    }));
+    return `<div class="report-funnel">${normalized.map((item,index)=>{
       const value=Number(item.count??item.value)||0;
-      return `<div class="report-funnel-row"><div><b>${item.label}</b></div><div class="track"><i style="width:${Math.max(value?5:0,(value/total)*100)}%;background:${colors[index%colors.length]}"></i></div><div>${value}</div></div>`;
+      const meaning=item.meaning?` · ${item.meaning}`:"";
+      return `<div class="report-funnel-row"><div><b>${item.label}</b>${meaning}</div><div class="track"><i style="width:${Math.max(value?5:0,(value/total)*100)}%;background:${colors[index%colors.length]}"></i></div><div>${value}</div></div>`;
     }).join("")}</div>`;
   };
   const methodRows=Array.isArray(radar.methodRows)?radar.methodRows:[];
@@ -1096,6 +1103,7 @@ function renderRadarOnlyReport(el){
       <button class="report-box static" type="button">
         <div class="report-box-title">Hitos cerrados / alertas del modelo</div>
         ${funnel(hitosItems)}
+        <p class="report-note">Los hitos corresponden al modelo: prework, construcción, documentación, implementación y cierre.</p>
       </button>
     </div>
     <h2>Método de levantamiento</h2>
