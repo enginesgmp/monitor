@@ -108,6 +108,26 @@ function processAlerts(process) {
     .filter(Boolean);
 }
 
+function extractSessionToken(login) {
+  if (typeof login === "string") return clean(login);
+  return clean(
+    login?.session_token ||
+    login?.sessionToken ||
+    login?.token ||
+    login?.access_token ||
+    login?.session?.session_token ||
+    login?.session?.sessionToken ||
+    login?.session?.token ||
+    login?.auth?.session_token ||
+    login?.auth?.token
+  );
+}
+
+function loginShape(login) {
+  if (!login || typeof login !== "object") return typeof login;
+  return Object.keys(login).slice(0, 8).join(",") || "objeto sin llaves";
+}
+
 function summarize(bootstrap) {
   const processes = Array.isArray(bootstrap?.procesos)
     ? bootstrap.procesos.filter(isActiveProcess)
@@ -209,8 +229,10 @@ export default async () => {
     }
 
     const login = await radarApi(apiUrl, "login", { username, password });
-    const sessionToken = login?.session_token;
-    if (!sessionToken) throw new Error("RADAR no entrego token de sesion.");
+    const sessionToken = extractSessionToken(login);
+    if (!sessionToken) {
+      throw new Error(`RADAR no entrego token de sesion. Forma recibida: ${loginShape(login)}.`);
+    }
 
     const bootstrap = await radarApi(apiUrl, "bootstrap", {}, sessionToken);
 
