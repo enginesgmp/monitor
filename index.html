@@ -91,7 +91,8 @@ tr:hover td{background:#f6fbff} .badge{display:inline-flex;border-radius:999px;p
 .tech-empty-mode .filters,
 .tech-empty-mode .kpis,
 .tech-empty-mode .grid,
-.tech-empty-mode .footer{display:none!important}
+.tech-empty-mode .footer,
+.tech-empty-mode #reportView{display:none!important}
 .tech-empty-panel{display:none;background:#fff;border:1px solid var(--line);border-radius:22px;padding:44px 24px;margin-top:16px;text-align:center;box-shadow:0 8px 20px rgba(6,27,53,.06)}
 .tech-empty-mode .tech-empty-panel{display:block}
 .tech-empty-panel h2{margin:0 0 8px;font-size:24px}
@@ -139,6 +140,29 @@ body.transformacion-active .view-tabs,body.tecnologia-active .view-tabs{display:
 #managementView{display:none}
 body.management-mode #managementView{display:block}
 body.management-mode .detailed-panel{display:none!important}
+
+#reportView{display:none}
+body.report-mode #reportView{display:block}
+body.report-mode #managementView,body.report-mode .detailed-panel{display:none!important}
+.report-onepager{margin-top:16px;color:#3a3a3a;background:#fcfbf8;border:1px solid #e3ded2;border-radius:18px;padding:24px 26px;box-shadow:0 10px 24px rgba(6,27,53,.08)}
+.report-onepager header{border-bottom:3px solid #ceaa53;padding-bottom:14px;margin-bottom:18px}
+.report-eyebrow{font-size:10px;letter-spacing:.22em;color:#9c7a22;font-weight:900;text-transform:uppercase}
+.report-onepager h1{font:700 29px/1.12 Georgia,serif;color:#011e41;margin:7px 0 5px;letter-spacing:0}
+.report-onepager h2{font:700 17px/1.2 Georgia,serif;color:#011e41;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid #ceaa53}
+.report-onepager .sub{color:#7f7869}
+.report-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e3ded2;border:1px solid #e3ded2}
+.report-kpi{border:0;background:#f5f0e6;padding:13px 15px;text-align:left;color:#3a3a3a;cursor:pointer}
+.report-kpi:hover,.report-box:hover,.report-bridge .st.clickable:hover{outline:2px solid rgba(206,170,83,.45);outline-offset:-2px}
+.report-kpi b{display:block;font:700 25px/1 Georgia,serif;color:#011e41;margin-bottom:5px}.report-kpi span{font-size:11px;color:#7f7869}.report-kpi.alert b{color:#8c2f2f}.report-kpi.gold b{color:#9c7a22}
+.report-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.report-box{border:1px solid #e3ded2;background:#fff;padding:17px 19px;cursor:pointer}.report-box.static{cursor:default}.report-box-title{font-size:12px;color:#7f7869;margin-bottom:8px}
+.report-stack{display:flex;height:30px;margin:6px 0 14px;border:1px solid #fff}.report-stack div{position:relative;min-width:22px}.report-stack span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 12px/1 Calibri,sans-serif;color:#fff}.report-stack div.light span{color:#011e41}
+.report-keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:#6d6658}.report-keys i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+.report-bridge{display:flex;align-items:stretch;flex-wrap:wrap;border:1px solid #e3ded2;background:#fff}.report-bridge .st{flex:1;min-width:112px;padding:12px 14px;border-right:1px solid #e3ded2}.report-bridge .st:last-child{border-right:0}.report-bridge .op{flex:0 0 46px;min-width:46px;display:flex;align-items:center;justify-content:center;background:#f5f0e6;font:700 17px/1 Georgia,serif;color:#ceaa53}.report-bridge b{display:block;font:700 21px/1 Georgia,serif;color:#011e41;margin-bottom:4px}.report-bridge span{font-size:10.5px;color:#7f7869;line-height:1.35;display:block}.report-bridge .out b{color:#9c7a22}
+.report-funnel{display:grid;gap:6px}.report-funnel-row{display:grid;grid-template-columns:160px 1fr 46px;gap:10px;align-items:center;font-size:12px}.report-funnel-row .track{height:14px;border-radius:0;background:#f4f1ea}.report-funnel-row i{display:block;height:14px}.report-funnel-row b{color:#011e41}
+.report-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.report-action{border:1px solid #e3ded2;background:#fff;padding:13px 15px;text-align:left;color:#3a3a3a}.report-action b{display:block;color:#011e41}.report-action span{font-size:11.5px;color:#7f7869}
+.report-note{font-size:11.5px;color:#7f7869;line-height:1.6;margin:10px 0 0}.report-link{color:#0645a8;font-weight:900;text-decoration:underline}
+@media(max-width:1000px){.report-kpis,.report-two,.report-actions{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.report-onepager{padding:18px 16px}.report-kpis,.report-two,.report-actions{grid-template-columns:1fr}.report-funnel-row{grid-template-columns:1fr}.report-bridge .op{display:none}}
 body.tecnologia-active .transform-only-field{display:none!important}
 .mgmt{margin-top:16px;color:#071836}
 .mgmt-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:12px}
@@ -186,7 +210,8 @@ body.tecnologia-active .transform-only-field{display:none!important}
     <button type="button" id="tabTecnologia" class="team-tab" onclick="switchTeam('tecnologia')">Equipo de Tecnología</button>
   </nav>
   <nav id="transformacionViewTabs" class="view-tabs" aria-label="Vista ejecutiva del equipo">
-    <button type="button" id="tabGerencia" class="view-tab active" onclick="switchTransformacionView('gerencia')">Vista Gerencial</button>
+    <button type="button" id="tabInforme" class="view-tab active" onclick="switchTransformacionView('informe')">Informe</button>
+    <button type="button" id="tabGerencia" class="view-tab" onclick="switchTransformacionView('gerencia')">Vista Gerencial</button>
     <button type="button" id="tabDetalle" class="view-tab" onclick="switchTransformacionView('detalle')">Vista Operativa</button>
   </nav>
 
@@ -213,6 +238,7 @@ body.tecnologia-active .transform-only-field{display:none!important}
     <p>No existen iniciativas registradas para el equipo seleccionado.</p>
   </section>
 
+  <section id="reportView" aria-live="polite"></section>
   <section id="managementView" class="mgmt" aria-live="polite"></section>
 
   <section class="filters detailed-panel">
@@ -397,8 +423,9 @@ const STORAGE_KEYS={
   transformacion:"reporte_iniciativas_transformacion_v36",
   tecnologia:"reporte_iniciativas_tecnologia_v37"
 };
+const RADAR_GPP_SNAPSHOT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",corte:"2026-09-09 14:39:14",procesosActivos:59,cerrados:22,atrasados:31,enCurso:4,planificados:2,avancePlan:"62%",planificacionCompleta:34,alertasMotor:12,inicioTardio:2,atrasadoNoIniciado:8,cerradoFueraPlazo:2};
 let activeTeam="transformacion";
-let activeTransformacionView="gerencia";
+let activeTransformacionView="informe";
 
 (function seedEmbeddedSources(){
   try{
@@ -846,6 +873,138 @@ function openUnclassifiedDetail(){
   applyFilters();
   document.querySelector(".table-card")?.scrollIntoView({behavior:"smooth",block:"start"});
 }
+function reportActiveRows(rows=DATA){
+  return activeTeam==="transformacion"?activeTransformacionUnits(rows):activeTechnologyUnits(rows);
+}
+function reportDelayedRows(activeRows){
+  return activeTeam==="transformacion"
+    ?activeRows.filter(isTransformacionDelayedActive)
+    :activeRows.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
+}
+function reportCriticalRows(activeRows){
+  return activeTeam==="transformacion"
+    ?activeRows.filter(isTransformacionCriticalActive)
+    :activeRows.filter(x=>isActiveOverdue(x)&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000);
+}
+function reportProgressBuckets(rows){
+  const buckets=[
+    {label:"0%",min:0,max:0,color:"#011E41",count:0},
+    {label:"1-25%",min:1,max:25,color:"#2B4A70",count:0},
+    {label:"26-50%",min:26,max:50,color:"#5B7897",count:0},
+    {label:"51-75%",min:51,max:75,color:"#8FA6BF",count:0,light:true},
+    {label:"76-99%",min:76,max:99,color:"#B9C7D6",count:0,light:true},
+    {label:"100%",min:100,max:100,color:"#DCE3EA",count:0,light:true}
+  ];
+  rows.forEach(x=>{
+    const v=Number.isFinite(x.avance)?Math.max(0,Math.min(100,x.avance)):0;
+    const bucket=buckets.find(b=>v>=b.min&&v<=b.max);
+    if(bucket)bucket.count++;
+  });
+  return buckets;
+}
+function setReportFilters(filters={}){
+  ["fEstado","fResp","fArea","fLider","fDimension","fTipo","fSearch"].forEach(id=>{if($(id))$(id).value="";});
+  if($("sortBy"))$("sortBy").value=filters.sortBy||"secuencia";
+  if(filters.estado&&$("fEstado"))$("fEstado").value=filters.estado;
+  if(filters.dimension&&$("fDimension"))$("fDimension").value=filters.dimension;
+  if(filters.search&&$("fSearch"))$("fSearch").value=filters.search;
+  activeKpiFilter=filters.predicate||null;
+  switchTransformacionView("detalle");
+}
+function openReportTarget(kind,value=""){
+  const delayed=x=>activeTeam==="transformacion"?isTransformacionDelayedActive(x):(isActiveOverdue(x)&&x.atraso!=null&&x.atraso>0&&Math.abs(x.atraso)<=1000);
+  const critical=x=>activeTeam==="transformacion"?isTransformacionCriticalActive(x):(isActiveOverdue(x)&&x.atraso!=null&&x.atraso>15&&Math.abs(x.atraso)<=1000);
+  const options={
+    active:activeTeam==="transformacion"?{estado:"EN CURSO"}:{predicate:x=>managementUnits([x]).length&&isActiveStatus(x,"tecnologia")},
+    closed:{estado:"CERRADO"},
+    backlog:{estado:"EN BACKLOG"},
+    delayed:{predicate:x=>managementUnits([x]).length&&delayed(x),sortBy:"atrasoDesc"},
+    critical:{predicate:x=>managementUnits([x]).length&&critical(x),sortBy:"atrasoDesc"},
+    dimension:{dimension:value},
+    search:{search:value}
+  };
+  setReportFilters(options[kind]||{});
+}
+function renderReportView(){
+  const el=$("reportView");
+  if(!el)return;
+  const rows=DATA;
+  const units=managementUnits(rows);
+  const activeRows=reportActiveRows(rows);
+  const delayedRows=reportDelayedRows(activeRows);
+  const criticalRows=reportCriticalRows(activeRows);
+  const closed=units.filter(x=>x.estado==="CERRADO");
+  const backlog=units.filter(x=>x.estado==="EN BACKLOG");
+  const avgActive=avg(activeRows.map(x=>Number.isFinite(x.avance)?x.avance:null));
+  const buckets=reportProgressBuckets(activeRows);
+  const grouping=currentDimensionCatalog().map(name=>{
+    const active=activeRows.filter(x=>groupingInfo(x,rows).value===name);
+    return {name,active,delayed:reportDelayedRows(active),critical:reportCriticalRows(active),avg:avg(active.map(x=>Number.isFinite(x.avance)?x.avance:null))};
+  }).filter(x=>x.active.length||x.delayed.length||x.critical.length);
+  const topRisks=delayedRows.slice().sort((a,b)=>(b.atraso??-999)-(a.atraso??-999)).slice(0,5);
+  const isTech=activeTeam==="tecnologia";
+  const teamName=isTech?"Tecnología":"Transformación";
+  const gpp=isTech?"":`
+    <h2>Implementación Gestión por Procesos</h2>
+    <div class="report-kpis">
+      <button class="report-kpi" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.procesosActivos}</b><span>Procesos activos RADAR</span></button>
+      <button class="report-kpi" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.avancePlan}</b><span>Avance del plan</span></button>
+      <button class="report-kpi alert" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.atrasados}</b><span>Procesos atrasados</span></button>
+      <button class="report-kpi gold" onclick="window.open('${RADAR_GPP_SNAPSHOT.url}','_blank','noopener')"><b>${RADAR_GPP_SNAPSHOT.alertasMotor}</b><span>Alertas motor V3</span></button>
+    </div>
+    <p class="report-note">Fuente externa consultada: RADAR módulo 8 · último corte visible ${esc(RADAR_GPP_SNAPSHOT.corte)}. No se guardan credenciales en el monitor; el acceso abre el módulo oficial.</p>`;
+  el.innerHTML=`
+  <article class="report-onepager">
+    <header>
+      <div class="report-eyebrow">ASISERVY S.A. · Informe CEO · ${esc(teamName)}</div>
+      <h1>Informe ejecutivo de iniciativas</h1>
+      <div class="sub">One pager dinámico del monitor · corte ${new Date().toLocaleDateString("es-EC")}</div>
+    </header>
+    <div class="report-kpis">
+      <button class="report-kpi" onclick="openReportTarget('active')"><b>${activeRows.length}</b><span>Iniciativas activas</span></button>
+      <button class="report-kpi" onclick="openReportTarget('closed')"><b>${closed.length}</b><span>Cerradas a la fecha</span></button>
+      <button class="report-kpi alert" onclick="openReportTarget('delayed')"><b>${delayedRows.length}</b><span>Activas atrasadas</span></button>
+      <button class="report-kpi gold" onclick="openReportTarget('critical')"><b>${criticalRows.length}</b><span>Críticas activas</span></button>
+      <button class="report-kpi" onclick="openReportTarget('backlog')"><b>${backlog.length}</b><span>Backlog</span></button>
+      <button class="report-kpi" onclick="openReportTarget('active')"><b>${avgActive==null?"—":fmtPct(avgActive)}</b><span>Avance medio activo</span></button>
+      <button class="report-kpi" onclick="switchTransformacionView('gerencia')"><b>${grouping.length}</b><span>${isTech?"Dimensiones":"Macrofrentes"} con actividad</span></button>
+      <button class="report-kpi" onclick="openReportTarget('search','')"><b>${units.length}</b><span>Registros computables</span></button>
+    </div>
+    <h2>Cuadre del universo</h2>
+    <div class="report-bridge">
+      <div class="st clickable" onclick="openReportTarget('search','')"><b>${rows.length}</b><span>Registros en fuente ${esc(teamName)}</span></div>
+      <div class="op">−</div>
+      <div class="st"><b>${rows.length-units.length}</b><span>PRIME excluidos de KPIs</span></div>
+      <div class="op">=</div>
+      <div class="st clickable" onclick="openReportTarget('search','')"><b>${units.length}</b><span>Iniciativas computables</span></div>
+      <div class="op">=</div>
+      <div class="st clickable" onclick="openReportTarget('closed')"><b>${closed.length}</b><span>Cerradas</span></div>
+      <div class="op">+</div>
+      <div class="st out clickable" onclick="openReportTarget('active')"><b>${activeRows.length}</b><span>Activas en seguimiento</span></div>
+    </div>
+    <h2>Estado de avance</h2>
+    <div class="report-two">
+      <button class="report-box" onclick="openReportTarget('active')">
+        <div class="report-box-title">Distribución por porcentaje de avance activo</div>
+        <div class="report-stack">${buckets.map(b=>`<div class="${b.light?"light":""}" style="width:${Math.max(7,b.count/Math.max(activeRows.length,1)*100)}%;background:${b.color}"><span>${b.count}</span></div>`).join("")}</div>
+        <div class="report-keys">${buckets.map(b=>`<span><i style="background:${b.color}"></i>${b.label}</span>`).join("")}<span style="margin-left:auto;font-weight:700;color:#011e41">Suma ${activeRows.length}</span></div>
+      </button>
+      <button class="report-box" onclick="openReportTarget('delayed')">
+        <div class="report-box-title">Focos de riesgo por atraso activo</div>
+        <div class="report-funnel">${topRisks.length?topRisks.map(x=>`<div class="report-funnel-row"><div><b>${esc(x.secuencia)}</b> · ${esc(String(x.iniciativa||"").slice(0,42))}</div><div class="track"><i style="width:${Math.min(100,Math.max(4,Math.abs(x.atraso||0)))}%;background:#8c2f2f"></i></div><div>${fmtPct(x.atraso)}</div></div>`).join(""):"<div class='ok'>Sin atrasos activos</div>"}</div>
+      </button>
+    </div>
+    <h2>${isTech?"Dimensiones":"Macrofrentes"}</h2>
+    <div class="report-actions">${grouping.map(x=>`<button class="report-action" onclick="openReportTarget('dimension','${esc(x.name)}')"><b>${esc(x.name)}</b><span>${x.active.length} activas · ${x.delayed.length} atrasadas · ${x.critical.length} críticas · avance ${x.avg==null?"—":fmtPct(x.avg)}</span></button>`).join("")||"<div class='report-note'>Sin agrupaciones activas.</div>"}</div>
+    ${gpp}
+    <h2>Navegación del reporte</h2>
+    <div class="report-actions">
+      <button class="report-action" onclick="switchTransformacionView('gerencia')"><b>Vista Gerencial</b><span>Tarjetas ejecutivas, restricciones e hitos foco.</span></button>
+      <button class="report-action" onclick="openReportTarget('delayed')"><b>Vista Operativa filtrada</b><span>Detalle de iniciativas atrasadas ordenadas por atraso.</span></button>
+      <button class="report-action" onclick="openReportTarget('critical')"><b>Críticas activas</b><span>Elementos con atraso superior al umbral crítico.</span></button>
+    </div>
+  </article>`;
+}
 function renderManagementView(){
   if(activeTeam==="tecnologia")return renderTechnologyManagementView();
   return renderTransformacionManagementView();
@@ -1033,7 +1192,7 @@ function applyFilters(){
     sort==="responsable"?(a.responsable||"").localeCompare(b.responsable||"","es"):
     (a.secuencia||"").localeCompare(b.secuencia||"","es",{numeric:true}));
   render();
-  renderManagementView();
+  renderReportView();
 }
 
 function avg(arr){const v=arr.filter(x=>Number.isFinite(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
@@ -1077,7 +1236,7 @@ function render(){
     ["En curso atrasadas",atrasoEnCurso,"#b91c1c",`${atrasoEnCursoNoAceptable} críticas calculadas`]
   ].map((x,i)=>`<div class="kpi" style="--accent:${x[2]};cursor:pointer" onclick="filterByKpi(${i})"><span>${x[0]}</span><b>${x[1]}</b><small>${x[3]}</small></div>`).join("");
 
-  renderStatus(); renderBars("ownerBars","responsable",8); renderBars("areaBars","area",8); renderMetrics(); renderQuality(); renderTable(); renderManagementView();
+  renderStatus(); renderBars("ownerBars","responsable",8); renderBars("areaBars","area",8); renderMetrics(); renderQuality(); renderTable(); renderReportView(); renderManagementView();
 }
 function counts(key){const m={};filtered.forEach(x=>m[x[key]]=(m[x[key]]||0)+1);return Object.entries(m).sort((a,b)=>b[1]-a[1]);}
 function renderStatus(){
@@ -2339,15 +2498,18 @@ function refreshFilterOptions(){
 function updateShellMode(){
   document.body.classList.toggle("transformacion-active",activeTeam==="transformacion");
   document.body.classList.toggle("tecnologia-active",activeTeam==="tecnologia");
+  document.body.classList.toggle("report-mode",activeTransformacionView==="informe");
   document.body.classList.toggle("management-mode",activeTransformacionView==="gerencia");
   document.body.classList.toggle("detail-mode",activeTransformacionView==="detalle");
+  if($("tabInforme"))$("tabInforme").classList.toggle("active",activeTransformacionView==="informe");
   if($("tabGerencia"))$("tabGerencia").classList.toggle("active",activeTransformacionView==="gerencia");
   if($("tabDetalle"))$("tabDetalle").classList.toggle("active",activeTransformacionView==="detalle");
 }
 function switchTransformacionView(view){
-  activeTransformacionView=view==="detalle"?"detalle":"gerencia";
+  activeTransformacionView=["informe","gerencia","detalle"].includes(view)?view:"informe";
   updateShellMode();
-  if(activeTransformacionView==="gerencia")renderManagementView();
+  if(activeTransformacionView==="informe")renderReportView();
+  else if(activeTransformacionView==="gerencia")renderManagementView();
   else applyFilters();
 }
 function updateTeamHeader(){
@@ -2362,7 +2524,7 @@ function updateTeamHeader(){
 function switchTeam(team){
   if(!["transformacion","tecnologia"].includes(team))return;
   activeTeam=team;
-  activeTransformacionView="gerencia";
+  activeTransformacionView="informe";
   DATA=loadData(team);
   activeKpiFilter=null;
   recalculateHierarchy();
@@ -2374,7 +2536,7 @@ function switchTeam(team){
     team==="tecnologia"&&DATA.length===0&&BASE_DATA_TECNOLOGIA.length===0
   );
   resetFilters();
-  renderManagementView();
+  renderReportView();
 }
 
 
