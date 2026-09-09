@@ -948,9 +948,58 @@ async function refreshRadarGpp(force=false){
     renderReportView();
   }
 }
+function renderRadarOnlyReport(el){
+  const radar=RADAR_GPP_STATE;
+  const status=radar.status==="ok"
+    ?`Fuente externa actualizada: ${esc(radar.source||"RADAR módulo 8")} · corte ${esc(radar.corte||"sin corte")}`
+    :radar.status==="loading"
+      ?"Actualizando información desde RADAR..."
+      :`RADAR pendiente/no disponible: ${esc(radar.message||"sin detalle")}`;
+  const openRadar=()=>window.open(radar.url,"_blank","noopener");
+  const card=(cls,value,label)=>`<button class="report-kpi ${cls}" data-radar-link="1"><b>${radarDisplay(value)}</b><span>${label}</span></button>`;
+  const action=(title,body,kind="open")=>`<button class="report-action" data-radar-action="${kind}"><b>${title}</b><span>${body}</span></button>`;
+  el.innerHTML=`
+  <article class="report-onepager">
+    <header>
+      <div class="report-eyebrow">ASISERVY S.A. · Informe CEO · Transformación</div>
+      <h1>Implementación Gestión por Procesos</h1>
+      <div class="sub">One pager basado exclusivamente en RADAR módulo 8 · corte ${new Date().toLocaleDateString("es-EC")}</div>
+    </header>
+    <div class="report-kpis">
+      ${card("",radar.procesosActivos,"Procesos activos RADAR")}
+      ${card("",radar.avancePlan,"Avance del plan")}
+      ${card("alert",radar.atrasados,"Procesos atrasados")}
+      ${card("gold",radar.alertasMotor,"Alertas motor V3")}
+      ${card("",radar.cerrados,"Procesos cerrados")}
+      ${card("",radar.enCurso,"Procesos en curso")}
+      ${card("",radar.planificados,"Procesos planificados")}
+      ${card("",radar.planificacionCompleta,"Planificación completa")}
+    </div>
+    <h2>Alertas RADAR</h2>
+    <div class="report-actions">
+      ${action("Inicio tardío",`${radarDisplay(radar.inicioTardio)} proceso(s) con alerta de arranque frente al plan.`)}
+      ${action("Atrasado no iniciado",`${radarDisplay(radar.atrasadoNoIniciado)} proceso(s) marcados por el motor V3.`)}
+      ${action("Cerrado fuera de plazo",`${radarDisplay(radar.cerradoFueraPlazo)} cierre(s) con desviación de plazo.`)}
+    </div>
+    <h2>Navegación del reporte</h2>
+    <div class="report-actions">
+      ${action("Abrir RADAR módulo 8","Fuente oficial del One Pager de Transformación.")}
+      ${action("Actualizar RADAR","Consulta nuevamente la función segura de Netlify.","refresh")}
+      ${action("Vista Gerencial del monitor","Consulta separada de iniciativas; no alimenta este One Pager.","gerencia")}
+    </div>
+    <p class="report-note">${status}. No se guardan credenciales en el monitor; la lectura se realiza mediante variables de entorno de Netlify.</p>
+  </article>`;
+  el.querySelectorAll("[data-radar-link='1'],[data-radar-action='open']").forEach(node=>node.addEventListener("click",openRadar));
+  el.querySelector("[data-radar-action='refresh']")?.addEventListener("click",()=>refreshRadarGpp(true));
+  el.querySelector("[data-radar-action='gerencia']")?.addEventListener("click",()=>switchTransformacionView("gerencia"));
+}
 function renderReportView(){
   const el=$("reportView");
   if(!el)return;
+  if(activeTeam!=="tecnologia"){
+    renderRadarOnlyReport(el);
+    return;
+  }
   const rows=DATA;
   const units=managementUnits(rows);
   const activeRows=reportActiveRows(rows);
