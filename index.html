@@ -159,6 +159,7 @@ body.report-mode #managementView,body.report-mode .detailed-panel{display:none!i
 .report-keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:#6d6658}.report-keys i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
 .report-bridge{display:flex;align-items:stretch;flex-wrap:wrap;border:1px solid #e3ded2;background:#fff}.report-bridge .st{flex:1;min-width:112px;padding:12px 14px;border-right:1px solid #e3ded2}.report-bridge .st:last-child{border-right:0}.report-bridge .op{flex:0 0 46px;min-width:46px;display:flex;align-items:center;justify-content:center;background:#f5f0e6;font:700 17px/1 Georgia,serif;color:#ceaa53}.report-bridge b{display:block;font:700 21px/1 Georgia,serif;color:#011e41;margin-bottom:4px}.report-bridge span{font-size:10.5px;color:#7f7869;line-height:1.35;display:block}.report-bridge .out b{color:#9c7a22}
 .report-funnel{display:grid;gap:6px}.report-funnel-row{display:grid;grid-template-columns:160px 1fr 46px;gap:10px;align-items:center;font-size:12px}.report-funnel-row .track{height:14px;border-radius:0;background:#f4f1ea}.report-funnel-row i{display:block;height:14px}.report-funnel-row b{color:#011e41}
+.report-method-table{width:100%;border-collapse:collapse;font-size:12px}.report-method-table th{font:700 10.5px/1 Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#a29a86;text-align:right;padding:0 0 6px;border-bottom:1px solid #e3ded2}.report-method-table th:first-child,.report-method-table td:first-child{text-align:left}.report-method-table td{padding:7px 0;border-bottom:1px solid #f1ede4;text-align:right;color:#5c5648}.report-method-table tr:last-child td{border-bottom:0}.report-method-table .tot td{border-top:1.5px solid #011e41;font-weight:700;color:#011e41;padding-top:8px}.report-split{display:flex;height:30px;margin:8px 0 12px}.report-split div{display:flex;align-items:center;justify-content:center;font:700 12px/1 Calibri,sans-serif;color:#fff;min-width:18px}.report-gantt{position:relative;padding-top:20px}.report-gantt-track{height:22px;background:#f4f1ea;position:relative}.report-gantt-bar{position:absolute;top:0;height:22px;display:flex;align-items:center;padding:0 9px;background:#011e41;color:#fff;font:700 11.5px/1 Calibri,sans-serif}.report-gantt-dates{display:flex;gap:26px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #e3ded2;font-size:12px;color:#6d6658}.report-gantt-dates b{color:#011e41}
 .report-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.report-action{border:1px solid #e3ded2;background:#fff;padding:13px 15px;text-align:left;color:#3a3a3a}.report-action b{display:block;color:#011e41}.report-action span{font-size:11.5px;color:#7f7869}
 .report-note{font-size:11.5px;color:#7f7869;line-height:1.6;margin:10px 0 0}.report-link{color:#0645a8;font-weight:900;text-decoration:underline}
 @media(max-width:1000px){.report-kpis,.report-two,.report-actions{grid-template-columns:1fr 1fr}}
@@ -423,8 +424,9 @@ const STORAGE_KEYS={
   transformacion:"reporte_iniciativas_transformacion_v36",
   tecnologia:"reporte_iniciativas_tecnologia_v37"
 };
-const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null};
+const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null,estadoBuckets:[],avanceBuckets:[],hitosBuckets:[],methodRows:[],timeline:{inicio:"",fin:""}};
 let RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,status:"idle",message:"Pendiente de actualizar desde RADAR"};
+let radarGppAutoRequested=false;
 let activeTeam="transformacion";
 let activeTransformacionView="informe";
 
@@ -949,6 +951,10 @@ async function refreshRadarGpp(force=false){
   }
 }
 function renderRadarOnlyReport(el){
+  if(RADAR_GPP_STATE.status==="idle"&&!radarGppAutoRequested){
+    radarGppAutoRequested=true;
+    setTimeout(()=>refreshRadarGpp(false),0);
+  }
   const radar=RADAR_GPP_STATE;
   const status=radar.status==="ok"
     ?`Fuente externa actualizada: ${esc(radar.source||"RADAR módulo 8")} · corte ${esc(radar.corte||"sin corte")}`
@@ -956,6 +962,32 @@ function renderRadarOnlyReport(el){
       ?"Actualizando información desde RADAR..."
       :`RADAR pendiente/no disponible: ${esc(radar.message||"sin detalle")}`;
   const openRadar=()=>window.open(radar.url,"_blank","noopener");
+  const colors=["#011e41","#2b4a70","#5b7897","#8fa6bf","#b9c7d6","#dce3ea"];
+  const sumValues=items=>items.reduce((total,item)=>total+(Number(item.count??item.value)||0),0);
+  const stack=(items,mode="count")=>{
+    const total=Math.max(sumValues(items),1);
+    return `<div class="report-stack">${items.map((item,index)=>{
+      const value=Number(item.count??item.value)||0;
+      const width=Math.max(value?7:0,(value/total)*100);
+      return `<div class="${index>3?"light":""}" style="width:${width}%;background:${colors[index%colors.length]}"><span>${value||""}</span></div>`;
+    }).join("")}</div><div class="report-keys">${items.map((item,index)=>`<span><i style="background:${colors[index%colors.length]}"></i>${item.label}</span>`).join("")}<span style="margin-left:auto;font-weight:700;color:#011e41">Suma ${total}</span></div>`;
+  };
+  const funnel=(items)=>{
+    const total=Math.max(...items.map(item=>Number(item.count??item.value)||0),1);
+    return `<div class="report-funnel">${items.map((item,index)=>{
+      const value=Number(item.count??item.value)||0;
+      return `<div class="report-funnel-row"><div><b>${item.label}</b></div><div class="track"><i style="width:${Math.max(value?5:0,(value/total)*100)}%;background:${colors[index%colors.length]}"></i></div><div>${value}</div></div>`;
+    }).join("")}</div>`;
+  };
+  const methodRows=Array.isArray(radar.methodRows)?radar.methodRows:[];
+  const methodTotal=methodRows.reduce((acc,row)=>({cerrados:acc.cerrados+(Number(row.cerrados)||0),pendientes:acc.pendientes+(Number(row.pendientes)||0),activos:acc.activos+(Number(row.activos)||0)}),{cerrados:0,pendientes:0,activos:0});
+  const methodTable=methodRows.length?`<table class="report-method-table"><tr><th>Método</th><th>Cerrados</th><th>Pendientes</th><th>Activos</th><th>Avance</th></tr>${methodRows.map((row,index)=>`<tr><td><i style="display:inline-block;width:9px;height:9px;margin-right:7px;background:${colors[index%colors.length]}"></i>${esc(row.metodo)}</td><td>${radarDisplay(row.cerrados)}</td><td>${radarDisplay(row.pendientes)}</td><td>${radarDisplay(row.activos)}</td><td>${radarDisplay(row.avance)}</td></tr>`).join("")}<tr class="tot"><td>Total</td><td>${methodTotal.cerrados}</td><td>${methodTotal.pendientes}</td><td>${methodTotal.activos}</td><td>${radarDisplay(radar.avancePlan)}</td></tr></table>`:`<p class="report-note">RADAR no entregó clasificación de método para graficar.</p>`;
+  const pending=Math.max(0,(Number(radar.procesosActivos)||0)-(Number(radar.cerrados)||0));
+  const timeline=radar.timeline||{};
+  const ganttLabel=timeline.inicio&&timeline.fin?`${timeline.inicio} - ${timeline.fin}`:"Ventana no disponible en RADAR";
+  const estadoItems=Array.isArray(radar.estadoBuckets)&&radar.estadoBuckets.length?radar.estadoBuckets:[{label:"Cerrados",value:radar.cerrados},{label:"Atrasados",value:radar.atrasados},{label:"En curso",value:radar.enCurso},{label:"Planificados",value:radar.planificados}];
+  const avanceItems=Array.isArray(radar.avanceBuckets)&&radar.avanceBuckets.some(x=>Number(x.count)>0)?radar.avanceBuckets:estadoItems;
+  const hitosItems=Array.isArray(radar.hitosBuckets)&&radar.hitosBuckets.some(x=>Number(x.count)>0)?radar.hitosBuckets:[{label:"Inicio tardío",count:radar.inicioTardio},{label:"Atrasado no iniciado",count:radar.atrasadoNoIniciado},{label:"Cerrado fuera plazo",count:radar.cerradoFueraPlazo}];
   const card=(cls,value,label)=>`<button class="report-kpi ${cls}" data-radar-link="1"><b>${radarDisplay(value)}</b><span>${label}</span></button>`;
   const action=(title,body,kind="open")=>`<button class="report-action" data-radar-action="${kind}"><b>${title}</b><span>${body}</span></button>`;
   el.innerHTML=`
@@ -974,6 +1006,41 @@ function renderRadarOnlyReport(el){
       ${card("",radar.enCurso,"Procesos en curso")}
       ${card("",radar.planificados,"Procesos planificados")}
       ${card("",radar.planificacionCompleta,"Planificación completa")}
+    </div>
+    <h2>Cuadre del universo RADAR</h2>
+    <div class="report-bridge">
+      <div class="st"><b>${radarDisplay(radar.procesosActivos)}</b><span>Procesos activos</span></div>
+      <div class="op">=</div>
+      <div class="st"><b>${radarDisplay(radar.cerrados)}</b><span>Cerrados</span></div>
+      <div class="op">+</div>
+      <div class="st out"><b>${radarDisplay(pending)}</b><span>Pendientes en RADAR</span></div>
+    </div>
+    <h2>Estado de avance</h2>
+    <div class="report-two">
+      <button class="report-box static" type="button">
+        <div class="report-box-title">Distribución por porcentaje de avance</div>
+        ${stack(avanceItems)}
+      </button>
+      <button class="report-box static" type="button">
+        <div class="report-box-title">Hitos cerrados / alertas del modelo</div>
+        ${funnel(hitosItems)}
+      </button>
+    </div>
+    <h2>Método de levantamiento</h2>
+    <div class="report-two">
+      <button class="report-box static" type="button">
+        <div class="report-box-title">Cuadre método × estado</div>
+        ${methodTable}
+      </button>
+      <button class="report-box static" type="button">
+        <div class="report-box-title">Estado vigente en RADAR</div>
+        ${stack(estadoItems)}
+      </button>
+    </div>
+    <h2>Cronograma de cierre</h2>
+    <div class="report-box static report-gantt">
+      <div class="report-gantt-track"><div class="report-gantt-bar" style="left:0;width:100%">${ganttLabel}</div></div>
+      <div class="report-gantt-dates"><span>Inicio <b>${timeline.inicio||"-"}</b></span><span>Fin <b>${timeline.fin||"-"}</b></span><span>Fuente <b>RADAR módulo 8</b></span></div>
     </div>
     <h2>Alertas RADAR</h2>
     <div class="report-actions">
