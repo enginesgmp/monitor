@@ -260,13 +260,16 @@ function summarize(bootstrap) {
     else if (state === "EN CURSO") enCurso += 1;
     else planificados += 1;
 
-    const progress = percentValue(process);
+    let progress = percentValue(process);
+    if (progress == null && stats.total > 0) {
+      progress = (stats.completed / stats.total) * 100;
+    }
     if (progress != null) {
       const bucket = avanceBuckets.find(item => progress >= item.min && progress <= item.max);
       if (bucket) bucket.count += 1;
     }
 
-    const hitos = Math.max(0, Math.min(4, stats.total > 0 ? stats.completed : Math.round((progress || 0) / 25)));
+    const hitos = Math.max(0, Math.min(4, Math.round((progress || 0) / 25)));
     const hitosKey = `${hitos} de 4`;
     hitosBuckets.set(hitosKey, (hitosBuckets.get(hitosKey) || 0) + 1);
 
