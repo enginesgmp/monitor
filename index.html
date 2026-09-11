@@ -431,6 +431,7 @@ const GPP_GANTT_SHEET_URL="https://docs.google.com/spreadsheets/d/1xWa4c5XvasIwU
 const GPP_GANTT_DEFAULT={phases:[{id:"levantamientos",name:"Levantamientos",meta:"40 procesos · 4 analistas",start:"2026-08-29",end:"2026-10-12",color:"navy"},{id:"integracion",name:"Integración",meta:"2 semanas · fase colectiva",start:"2026-10-13",end:"2026-10-26",color:"steel"},{id:"afinamiento",name:"Afinamiento",meta:"2 semanas · 18 brechas",start:"2026-10-27",end:"2026-11-09",color:"gold"}],milestones:[{id:"finLevantamientos",label:"Fin de levantamientos",date:"2026-10-12",type:"dashed"},{id:"cierre",label:"Cierre del programa",date:"2026-11-09",type:"final"}]};
 let GPP_GANTT_SHARED={status:"idle",message:"Pendiente de cargar cronograma compartido",sheetUrl:GPP_GANTT_SHEET_URL,plan:null};
 let ganttGppAutoRequested=false;
+let reportExternalDataPromise=null;
 let activeTeam="transformacion";
 let activeTransformacionView="informe";
 
@@ -1018,14 +1019,20 @@ function renderGppGantt(){
   const sourceText=GPP_GANTT_SHARED.status==="ok"?"Fuente: Google Sheet compartido":GPP_GANTT_SHARED.status==="loading"?"Actualizando fuente compartida...":"Fuente compartida no disponible; se muestra plan base";
   return `<div class="report-gantt-tools"><button type="button" class="report-mini-btn" id="gppGanttEditBtn">Editar en Google Sheet</button><button type="button" class="report-mini-btn" id="gppGanttRefreshBtn">Actualizar cronograma</button></div><div class="report-gantt-head"><div class="lbl">Fase</div><div class="sc">${ticks}</div></div><div class="report-gantt-body"><div class="report-gantt-field">${lines}${milestones}</div>${rows}</div><div class="report-gantt-dates"><span>Arranque <b>${formatGanttDate(plan.phases[0]?.start)}</b></span><span>Fin de levantamientos <b>${formatGanttDate(plan.phases[0]?.end)}</b></span><span>Fin de integración <b>${formatGanttDate(plan.phases[1]?.end)}</b></span><span>Cierre del programa <b>${formatGanttDate(plan.phases[2]?.end)}</b></span><span>${sourceText}</span></div>`;
 }
+function ensureReportExternalData(force=false){
+  if(activeTeam!=="transformacion"&&!force)return null;
+  if(reportExternalDataPromise&&!force)return reportExternalDataPromise;
+  radarGppAutoRequested=true;
+  ganttGppAutoRequested=true;
+  reportExternalDataPromise=Promise.all([
+    RADAR_GPP_STATE.status==="ok"&&!force?Promise.resolve(RADAR_GPP_STATE):refreshRadarGpp(force),
+    GPP_GANTT_SHARED.status==="ok"&&!force?Promise.resolve(GPP_GANTT_SHARED):refreshGppGanttPlan(force)
+  ]).finally(()=>{reportExternalDataPromise=null;});
+  return reportExternalDataPromise;
+}
 function renderRadarOnlyReport(el){
-  if(RADAR_GPP_STATE.status==="idle"&&!radarGppAutoRequested){
-    radarGppAutoRequested=true;
-    setTimeout(()=>refreshRadarGpp(false),0);
-  }
-  if(GPP_GANTT_SHARED.status==="idle"&&!ganttGppAutoRequested){
-    ganttGppAutoRequested=true;
-    setTimeout(()=>refreshGppGanttPlan(false),0);
+  if((RADAR_GPP_STATE.status==="idle"||GPP_GANTT_SHARED.status==="idle")&&!reportExternalDataPromise){
+    setTimeout(()=>ensureReportExternalData(false),0);
   }
   const radar=RADAR_GPP_STATE;
   const status=radar.status==="ok"
@@ -2736,7 +2743,10 @@ function updateShellMode(){
 function switchTransformacionView(view){
   activeTransformacionView=["informe","gerencia","detalle"].includes(view)?view:"informe";
   updateShellMode();
-  if(activeTransformacionView==="informe")renderReportView();
+  if(activeTransformacionView==="informe"){
+    renderReportView();
+    ensureReportExternalData(false);
+  }
   else if(activeTransformacionView==="gerencia")renderManagementView();
   else applyFilters();
 }
@@ -2765,6 +2775,7 @@ function switchTeam(team){
   );
   resetFilters();
   renderReportView();
+  ensureReportExternalData(false);
 }
 
 
@@ -3024,10 +3035,16 @@ document.addEventListener("DOMContentLoaded",()=>{
   }
 
   setTimeout(()=>{
+    if(typeof ensureReportExternalData==="function"){
+      ensureReportExternalData(false);
+    }
     if(typeof refreshRemoteSources==="function"){
       refreshRemoteSources(false);
     }
   },250);
+  window.addEventListener("load",()=>{
+    setTimeout(()=>ensureReportExternalData(false),100);
+  },{once:true});
 });
 
 </script>
