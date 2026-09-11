@@ -214,6 +214,12 @@ function dateFromRow(row, names) {
   return dateValue(pick(row, names));
 }
 
+function hasUsableSummary(summary) {
+  const detected = Number(summary?.diagnostico?.procesosDetectados) || 0;
+  const active = Number(summary?.procesosActivos) || 0;
+  const details = Array.isArray(summary?.processDetails) ? summary.processDetails.length : 0;
+  return detected > 0 || active > 0 || details > 0;
+}
 function summarize(bootstrap) {
   const source = bootstrap?.bootstrap || bootstrap?.payload || bootstrap?.data || bootstrap;
   const processes = deepFindArray(source, ["procesos", "processes"]).filter(isActiveProcess);
@@ -414,13 +420,22 @@ export default async () => {
       throw new Error(`RADAR no entrego token de sesion. Forma recibida: ${loginShape(login)}.`);
     }
 
-    const bootstrap = await radarApi(apiUrl, "bootstrap", {}, sessionToken);
+    let bootstrap = await radarApi(apiUrl, "bootstrap", {}, sessionToken);
+    let summary = summarize(bootstrap);
+    if (!hasUsableSummary(summary)) {
+      await new Promise(resolve => setTimeout(resolve, 700));
+      bootstrap = await radarApi(apiUrl, "bootstrap", {}, sessionToken);
+      summary = summarize(bootstrap);
+    }
+    if (!hasUsableSummary(summary)) {
+      throw new Error("RADAR respondió sin procesos detectables; se evita publicar una lectura en cero.");
+    }
 
     return Response.json(
       {
         ok: true,
         generatedAt: new Date().toISOString(),
-        ...summarize(bootstrap)
+        ...summary
       },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
