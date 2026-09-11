@@ -935,6 +935,12 @@ function openReportTarget(kind,value=""){
   setReportFilters(options[kind]||{});
 }
 function radarDisplay(value){return value==null||value===""?"—":value;}
+function hasUsableRadarPayload(payload){
+  const detected=Number(payload?.diagnostico?.procesosDetectados)||0;
+  const active=Number(payload?.procesosActivos)||0;
+  const details=Array.isArray(payload?.processDetails)?payload.processDetails.length:0;
+  return detected>0||active>0||details>0;
+}
 async function refreshRadarGpp(force=false){
   if(activeTeam!=="transformacion"&&!force)return null;
   RADAR_GPP_STATE={...RADAR_GPP_STATE,status:"loading",message:"Actualizando información desde RADAR..."};
@@ -945,7 +951,10 @@ async function refreshRadarGpp(force=false){
     if(!response.ok||!payload?.ok){
       throw new Error(payload?.message||"RADAR respondió "+response.status);
     }
-    RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,...payload,status:"ok",message:"Actualizado desde RADAR"};
+    if(!hasUsableRadarPayload(payload)){
+        throw new Error("RADAR respondió sin procesos; se mantiene la última lectura válida.");
+      }
+      RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,...payload,status:"ok",message:"Actualizado desde RADAR"};
     return RADAR_GPP_STATE;
   }catch(error){
     RADAR_GPP_STATE={...RADAR_GPP_STATE,status:"error",message:error?.message||"No fue posible actualizar RADAR"};
