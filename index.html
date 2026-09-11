@@ -427,8 +427,10 @@ const STORAGE_KEYS={
 const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null,estadoBuckets:[],avanceBuckets:[],hitosBuckets:[],methodRows:[],timeline:{inicio:"",fin:""}};
 let RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,status:"idle",message:"Pendiente de actualizar desde RADAR"};
 let radarGppAutoRequested=false;
-const GPP_GANTT_STORAGE_KEY="reporte_gpp_gantt_plan_v1";
+const GPP_GANTT_SHEET_URL="https://docs.google.com/spreadsheets/d/1xWa4c5XvasIwUpemXtWNZWxVNRcdPXFCsmEPN_JN_Ys/edit";
 const GPP_GANTT_DEFAULT={phases:[{id:"levantamientos",name:"Levantamientos",meta:"40 procesos · 4 analistas",start:"2026-08-29",end:"2026-10-12",color:"navy"},{id:"integracion",name:"Integración",meta:"2 semanas · fase colectiva",start:"2026-10-13",end:"2026-10-26",color:"steel"},{id:"afinamiento",name:"Afinamiento",meta:"2 semanas · 18 brechas",start:"2026-10-27",end:"2026-11-09",color:"gold"}],milestones:[{id:"finLevantamientos",label:"Fin de levantamientos",date:"2026-10-12",type:"dashed"},{id:"cierre",label:"Cierre del programa",date:"2026-11-09",type:"final"}]};
+let GPP_GANTT_SHARED={status:"idle",message:"Pendiente de cargar cronograma compartido",sheetUrl:GPP_GANTT_SHEET_URL,plan:null};
+let ganttGppAutoRequested=false;
 let activeTeam="transformacion";
 let activeTransformacionView="informe";
 
@@ -965,37 +967,31 @@ function shortGanttDate(value){
   return date?date.toLocaleDateString("es-EC",{day:"numeric",month:"short",timeZone:"America/Guayaquil"}).replace(".",""):"-";
 }
 function loadGppGanttPlan(){
+  return JSON.parse(JSON.stringify(GPP_GANTT_SHARED.plan||GPP_GANTT_DEFAULT));
+}
+async function refreshGppGanttPlan(force=false){
+  if(activeTeam!=="transformacion"&&!force)return null;
+  GPP_GANTT_SHARED={...GPP_GANTT_SHARED,status:"loading",message:"Actualizando cronograma compartido..."};
+  renderReportView();
   try{
-    const saved=JSON.parse(localStorage.getItem(GPP_GANTT_STORAGE_KEY)||"null");
-    if(saved&&Array.isArray(saved.phases)&&saved.phases.length===3)return saved;
-  }catch(e){}
-  return JSON.parse(JSON.stringify(GPP_GANTT_DEFAULT));
+    const response=await fetch("/.netlify/functions/load-gantt?cacheBust="+Date.now(),{cache:"no-store"});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok||!payload?.ok){
+      throw new Error(payload?.message||"Gantt respondió "+response.status);
+    }
+    GPP_GANTT_SHARED={status:"ok",message:"Cronograma actualizado desde Google Sheet",sheetUrl:payload.sheetUrl||GPP_GANTT_SHARED.sheetUrl,plan:{phases:payload.phases||[],milestones:payload.milestones||[]}};
+    return GPP_GANTT_SHARED;
+  }catch(error){
+    GPP_GANTT_SHARED={...GPP_GANTT_SHARED,status:"error",message:error?.message||"No fue posible actualizar el cronograma compartido"};
+    console.warn("No fue posible actualizar el cronograma compartido",error);
+    renderReportView();
+    return {error:true,team:"gantt",message:GPP_GANTT_SHARED.message};
+  }finally{
+    renderReportView();
+  }
 }
-function saveGppGanttPlan(plan){
-  try{localStorage.setItem(GPP_GANTT_STORAGE_KEY,JSON.stringify(plan));}catch(e){}
-}
-function resetGppGanttPlan(){
-  try{localStorage.removeItem(GPP_GANTT_STORAGE_KEY);}catch(e){}
-  renderReportView();
-}
-function updateGppGanttPlanFromForm(){
-  const plan=loadGppGanttPlan();
-  plan.phases=plan.phases.map(phase=>({
-    ...phase,
-    start:document.querySelector('[data-gantt-start="'+phase.id+'"]')?.value||phase.start,
-    end:document.querySelector('[data-gantt-end="'+phase.id+'"]')?.value||phase.end
-  }));
-  const finLev=plan.phases.find(x=>x.id==="levantamientos")?.end||plan.milestones[0].date;
-  const cierre=plan.phases.find(x=>x.id==="afinamiento")?.end||plan.milestones[1].date;
-  plan.milestones=[
-    {id:"finLevantamientos",label:"Fin de levantamientos",date:finLev,type:"dashed"},
-    {id:"cierre",label:"Cierre del programa",date:cierre,type:"final"}
-  ];
-  saveGppGanttPlan(plan);
-  renderReportView();
-}
-function toggleGppGanttEditor(){
-  document.getElementById("gppGanttEditor")?.classList.toggle("open");
+function openGppGanttSheet(){
+  window.open(GPP_GANTT_SHARED.sheetUrl,"_blank","noopener");
 }
 function renderGppGantt(){
   const plan=loadGppGanttPlan();
@@ -1019,13 +1015,17 @@ function renderGppGantt(){
     const cls=phase.color==="steel"?"steel":phase.color==="gold"?"gold":"";
     return `<div class="report-gantt-row"><div class="lbl"><b>${esc(phase.name)}</b><i>${esc(phase.meta)}</i></div><div class="sc"><div class="report-gantt-bar ${cls}" style="left:${left}%;width:${width}%">${shortGanttDate(phase.start)} - ${shortGanttDate(phase.end)}</div></div></div>`;
   }).join("");
-  const editor=plan.phases.map(phase=>`<label>${esc(phase.name)} inicio<input type="date" data-gantt-start="${phase.id}" value="${esc(phase.start)}"></label><label>${esc(phase.name)} fin<input type="date" data-gantt-end="${phase.id}" value="${esc(phase.end)}"></label><label>${esc(phase.name)} fase<input value="${esc(phase.meta)}" disabled></label>`).join("");
-  return `<div class="report-gantt-tools"><button type="button" class="report-mini-btn" id="gppGanttEditBtn">Editar cronograma</button><button type="button" class="report-mini-btn" id="gppGanttResetBtn">Restaurar plan base</button></div><div class="report-gantt-head"><div class="lbl">Fase</div><div class="sc">${ticks}</div></div><div class="report-gantt-body"><div class="report-gantt-field">${lines}${milestones}</div>${rows}</div><div class="report-gantt-dates"><span>Arranque <b>${formatGanttDate(plan.phases[0]?.start)}</b></span><span>Fin de levantamientos <b>${formatGanttDate(plan.phases[0]?.end)}</b></span><span>Fin de integración <b>${formatGanttDate(plan.phases[1]?.end)}</b></span><span>Cierre del programa <b>${formatGanttDate(plan.phases[2]?.end)}</b></span></div><div class="report-gantt-editor" id="gppGanttEditor">${editor}<div class="wide"><button type="button" class="report-mini-btn" id="gppGanttSaveBtn">Guardar cronograma</button></div></div>`;
+  const sourceText=GPP_GANTT_SHARED.status==="ok"?"Fuente: Google Sheet compartido":GPP_GANTT_SHARED.status==="loading"?"Actualizando fuente compartida...":"Fuente compartida no disponible; se muestra plan base";
+  return `<div class="report-gantt-tools"><button type="button" class="report-mini-btn" id="gppGanttEditBtn">Editar en Google Sheet</button><button type="button" class="report-mini-btn" id="gppGanttRefreshBtn">Actualizar cronograma</button></div><div class="report-gantt-head"><div class="lbl">Fase</div><div class="sc">${ticks}</div></div><div class="report-gantt-body"><div class="report-gantt-field">${lines}${milestones}</div>${rows}</div><div class="report-gantt-dates"><span>Arranque <b>${formatGanttDate(plan.phases[0]?.start)}</b></span><span>Fin de levantamientos <b>${formatGanttDate(plan.phases[0]?.end)}</b></span><span>Fin de integración <b>${formatGanttDate(plan.phases[1]?.end)}</b></span><span>Cierre del programa <b>${formatGanttDate(plan.phases[2]?.end)}</b></span><span>${sourceText}</span></div>`;
 }
 function renderRadarOnlyReport(el){
   if(RADAR_GPP_STATE.status==="idle"&&!radarGppAutoRequested){
     radarGppAutoRequested=true;
     setTimeout(()=>refreshRadarGpp(false),0);
+  }
+  if(GPP_GANTT_SHARED.status==="idle"&&!ganttGppAutoRequested){
+    ganttGppAutoRequested=true;
+    setTimeout(()=>refreshGppGanttPlan(false),0);
   }
   const radar=RADAR_GPP_STATE;
   const status=radar.status==="ok"
@@ -1138,9 +1138,8 @@ function renderRadarOnlyReport(el){
   el.querySelectorAll("[data-radar-link='1'],[data-radar-action='open']").forEach(node=>node.addEventListener("click",openRadar));
   el.querySelector("[data-radar-action='refresh']")?.addEventListener("click",()=>refreshRadarGpp(true));
   el.querySelector("[data-radar-action='gerencia']")?.addEventListener("click",()=>switchTransformacionView("gerencia"));
-  el.querySelector("#gppGanttEditBtn")?.addEventListener("click",toggleGppGanttEditor);
-  el.querySelector("#gppGanttSaveBtn")?.addEventListener("click",updateGppGanttPlanFromForm);
-  el.querySelector("#gppGanttResetBtn")?.addEventListener("click",resetGppGanttPlan);
+  el.querySelector("#gppGanttEditBtn")?.addEventListener("click",openGppGanttSheet);
+  el.querySelector("#gppGanttRefreshBtn")?.addEventListener("click",()=>refreshGppGanttPlan(true));
 }
 function renderReportView(){
   const el=$("reportView");
@@ -2063,14 +2062,15 @@ async function refreshRemoteSources(force=false){
   }
   showRemoteLoading(true,force?"Forzando actualización de ambas fuentes...":"Actualizando información...");
   try{
-    const [transformacion,tecnologia,radar]=await Promise.all([
+    const [transformacion,tecnologia,radar,gantt]=await Promise.all([
       refreshRemoteTeam("transformacion",force),
       refreshRemoteTeam("tecnologia",force),
-      refreshRadarGpp(force)
+      refreshRadarGpp(force),
+      refreshGppGanttPlan(force)
     ]);
-    const errors=[transformacion,tecnologia,radar].filter(x=>x&&x.error);
+    const errors=[transformacion,tecnologia,radar,gantt].filter(x=>x&&x.error);
     $("remoteNote").textContent=errors.length
-      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>x.team==="radar"?`RADAR: ${x.message||"error no especificado"}`:`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
+      ?`Se mantiene la última copia válida en ${errors.length} fuente(s) con error: ${errors.map(x=>x.team==="radar"?`RADAR: ${x.message||"error no especificado"}`:x.team==="gantt"?`Gantt: ${x.message||"error no especificado"}`:`${x.team==="tecnologia"?"Tecnología":"Transformación"}: ${x.message||"error no especificado"}`).join(" | ")}`
       :`Información actualizada correctamente: ${new Date().toLocaleString("es-EC")}.`;
   }finally{
     showRemoteLoading(false);
