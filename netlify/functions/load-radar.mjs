@@ -241,6 +241,7 @@ function summarize(bootstrap) {
   ];
   const hitosBuckets = new Map([["0 de 4", 0], ["1 de 4", 0], ["2 de 4", 0], ["3 de 4", 0], ["4 de 4", 0]]);
   const methodRows = new Map();
+  const processDetails = [];
   const dates = [];
 
   function methodRow(name) {
@@ -310,6 +311,26 @@ function summarize(bootstrap) {
     if (alertText.includes("CERRADO FUERA") || alertText.includes("CIERRE FUERA")) {
       cerradoFueraPlazo += 1;
     }
+
+    const hitosMeaning = ["por arrancar", "prework hecho", "en construcción", "por cerrar", "cerrado"];
+    processDetails.push({
+      id: processId || `proceso_${processDetails.length + 1}`,
+      name: clean(pick(process, ["nombre_proceso", "nombreProceso", "proceso", "nombre", "name", "descripcion", "descripcion_proceso"])) || processId || "Proceso sin nombre",
+      leader: clean(pick(process, ["lider", "líder", "responsable", "owner", "dueno", "dueño", "responsable_proceso", "responsableProceso"])),
+      analyst: clean(pick(process, ["analista", "responsable_levantamiento", "responsableLevantamiento", "levantador"])),
+      priority: clean(pick(process, ["prioridad", "priority", "criticidad"])),
+      state,
+      progress: progress == null ? null : Math.round(progress),
+      hitos: hitosKey,
+      hitosMeaning: hitosMeaning[hitos] || "",
+      method,
+      start: clean(start),
+      end: clean(end),
+      days: clean(pick(process, ["dias", "días", "dias_pendientes", "dias_hito", "dias_estimados", "diasEstimados"])),
+      next: clean(pick(process, ["proximo_hito", "próximo_hito", "siguiente_hito", "hito_actual", "etapa", "fase"])),
+      alerts,
+      alertCount: alerts.length
+    });
   }
 
   const computedAdvance = activityTotal > 0
@@ -350,6 +371,7 @@ function summarize(bootstrap) {
     ],
     avanceBuckets: avanceBuckets.map(({ label, count }) => ({ label, count })),
     hitosBuckets: [...hitosBuckets.entries()].map(([label, count]) => ({ label, count })),
+    processDetails: processDetails.slice(0, 200),
     methodRows: [...methodRows.values()].map(row => ({
       metodo: row.metodo,
       cerrados: row.cerrados,
