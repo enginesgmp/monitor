@@ -155,13 +155,13 @@ body.report-mode #managementView,body.report-mode .detailed-panel{display:none!i
 .report-kpi:hover,.report-box:hover,.report-bridge .st.clickable:hover{outline:2px solid rgba(206,170,83,.45);outline-offset:-2px}
 .report-kpi b{display:block;font:700 25px/1 Georgia,serif;color:#011e41;margin-bottom:5px}.report-kpi span{font-size:11px;color:#7f7869}.report-kpi.alert b{color:#8c2f2f}.report-kpi.gold b{color:#9c7a22}
 .report-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.report-box{border:1px solid #e3ded2;background:#fff;padding:17px 19px;cursor:pointer}.report-box.static{cursor:default}.report-box-title{font-size:12px;color:#7f7869;margin-bottom:8px}
-.report-stack{display:flex;height:30px;margin:6px 0 14px;border:1px solid #fff}.report-stack div{position:relative;min-width:22px}.report-stack span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 12px/1 Calibri,sans-serif;color:#fff}.report-stack div.light span{color:#011e41}
+.report-stack{display:flex;height:30px;margin:6px 0 14px;border:1px solid #fff}.report-stack div,.report-stack button{position:relative;min-width:22px;padding:0}.report-stack span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 12px/1 Calibri,sans-serif;color:#fff}.report-stack div.light span,.report-stack button.light span{color:#011e41}
 .report-keys{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:#6d6658}.report-keys i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
-.report-bridge{display:flex;align-items:stretch;flex-wrap:wrap;border:1px solid #e3ded2;background:#fff}.report-bridge .st{flex:1;min-width:112px;padding:12px 14px;border-right:1px solid #e3ded2}.report-bridge .st:last-child{border-right:0}.report-bridge .op{flex:0 0 46px;min-width:46px;display:flex;align-items:center;justify-content:center;background:#f5f0e6;font:700 17px/1 Georgia,serif;color:#ceaa53}.report-bridge b{display:block;font:700 21px/1 Georgia,serif;color:#011e41;margin-bottom:4px}.report-bridge span{font-size:10.5px;color:#7f7869;line-height:1.35;display:block}.report-bridge .out b{color:#9c7a22}
+.report-bridge{display:flex;align-items:stretch;flex-wrap:wrap;border:1px solid #e3ded2;background:#fff}.report-bridge .st{flex:1;min-width:112px;padding:12px 14px;border:0;border-right:1px solid #e3ded2;background:#fff;text-align:left}.report-bridge .st:last-child{border-right:0}.report-bridge .op{flex:0 0 46px;min-width:46px;display:flex;align-items:center;justify-content:center;background:#f5f0e6;font:700 17px/1 Georgia,serif;color:#ceaa53}.report-bridge b{display:block;font:700 21px/1 Georgia,serif;color:#011e41;margin-bottom:4px}.report-bridge span{font-size:10.5px;color:#7f7869;line-height:1.35;display:block}.report-bridge .out b{color:#9c7a22}
 .report-funnel{display:grid;gap:6px}.report-funnel-row{display:grid;grid-template-columns:160px 1fr 46px;gap:10px;align-items:center;font-size:12px}.report-funnel-row .track{height:14px;border-radius:0;background:#f4f1ea}.report-funnel-row i{display:block;height:14px}.report-funnel-row b{color:#011e41}
 .report-method-table{width:100%;border-collapse:collapse;font-size:12px}.report-method-table th{font:700 10.5px/1 Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#a29a86;text-align:right;padding:0 0 6px;border-bottom:1px solid #e3ded2}.report-method-table th:first-child,.report-method-table td:first-child{text-align:left}.report-method-table td{padding:7px 0;border-bottom:1px solid #f1ede4;text-align:right;color:#5c5648}.report-method-table tr:last-child td{border-bottom:0}.report-method-table .tot td{border-top:1.5px solid #011e41;font-weight:700;color:#011e41;padding-top:8px}.report-split{display:flex;height:30px;margin:8px 0 12px}.report-split div{display:flex;align-items:center;justify-content:center;font:700 12px/1 Calibri,sans-serif;color:#fff;min-width:18px}.report-gantt{position:relative;padding:18px 20px}.report-gantt-head{display:flex;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#a29a86;font-weight:700;margin-bottom:4px}.report-gantt-head .lbl{width:168px;flex:0 0 168px}.report-gantt-head .sc{flex:1;position:relative;height:15px}.report-gantt-tick{position:absolute;font-size:10px;color:#a29a86;transform:translateX(-50%);font-weight:400;text-transform:none;letter-spacing:0}.report-gantt-body{position:relative}.report-gantt-field{position:absolute;top:0;bottom:0;left:168px;right:0;pointer-events:none}.report-gantt-vline{position:absolute;top:0;bottom:0;width:1px;background:#f0ece2}.report-gantt-milestone{position:absolute;top:0;bottom:0;border-left:2px dashed #011e41}.report-gantt-milestone.fin{border-left:2px solid #ceaa53}.report-gantt-row{display:flex;align-items:center;height:46px;position:relative;z-index:2}.report-gantt-row .lbl{width:168px;flex:0 0 168px;padding-right:12px}.report-gantt-row .lbl b{display:block;color:#011e41;font-size:13px;line-height:1.3}.report-gantt-row .lbl i{display:block;font-style:normal;font-size:10.5px;line-height:1.35;color:#a29a86}.report-gantt-row .sc{flex:1;position:relative;height:100%}.report-gantt-bar{position:absolute;top:50%;transform:translateY(-50%);height:22px;display:flex;align-items:center;padding:0 9px;font:700 11.5px/1 Calibri,sans-serif;color:#fff;white-space:nowrap;background:#011e41}.report-gantt-bar.steel{background:#6e7f94}.report-gantt-bar.gold{background:#ceaa53;color:#011e41}.report-gantt-dates{display:flex;gap:26px;flex-wrap:wrap;margin-top:14px;padding-top:11px;border-top:1px solid #e3ded2;font-size:12px;color:#6d6658}.report-gantt-dates b{color:#011e41}.report-gantt-tools{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px}.report-mini-btn{border:1px solid #d7c99f;background:#fff;color:#011e41;padding:7px 10px;font-weight:800;cursor:pointer}.report-gantt-editor{display:none;margin-top:14px;padding-top:12px;border-top:1px solid #e3ded2}.report-gantt-editor.open{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.report-gantt-editor label{font-size:11.5px;color:#6d6658;font-weight:700}.report-gantt-editor input{display:block;width:100%;margin-top:4px;border:1px solid #d7c99f;padding:8px;background:#fff;color:#011e41}.report-gantt-editor .wide{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
 .report-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.report-action{border:1px solid #e3ded2;background:#fff;padding:13px 15px;text-align:left;color:#3a3a3a}.report-action b{display:block;color:#011e41}.report-action span{font-size:11.5px;color:#7f7869}
-.report-note{font-size:11.5px;color:#7f7869;line-height:1.6;margin:10px 0 0}.report-link{color:#0645a8;font-weight:900;text-decoration:underline}
+.radar-detail-panel{border:1px solid #e3ded2;background:#fff;padding:14px 16px}.radar-detail-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px}.radar-detail-head b{display:block;color:#011e41;font-size:15px}.radar-detail-head span{font-size:11.5px;color:#7f7869}.radar-filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.radar-chip{border:1px solid #d7c99f;background:#fcfbf8;color:#011e41;padding:7px 10px;font-weight:800;cursor:pointer}.radar-chip.active{background:#011e41;color:#fff;border-color:#011e41}.radar-detail-table{width:100%;border-collapse:collapse;font-size:12px}.radar-detail-table th{font:700 10.5px/1 Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#a29a86;text-align:left;padding:7px 6px;border-bottom:1px solid #e3ded2}.radar-detail-table td{padding:8px 6px;border-bottom:1px solid #f1ede4;vertical-align:top;color:#5c5648}.radar-detail-table td:first-child{font-weight:800;color:#011e41}.radar-detail-table .alert-text{color:#8c2f2f;font-weight:700}.radar-detail-table-wrap{overflow:auto;max-height:360px;border-top:1px solid #f1ede4}.radar-detail-empty{padding:14px;border:1px dashed #d7c99f;background:#fcfbf8;color:#7f7869;font-size:12px}.report-stack button,.report-keys button,.report-funnel-row{border:0;cursor:pointer;text-align:left;font:inherit}.report-keys button{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#5c5648;padding:0;margin-right:10px}.report-note{font-size:11.5px;color:#7f7869;line-height:1.6;margin:10px 0 0}.report-link{color:#0645a8;font-weight:900;text-decoration:underline}
 @media(max-width:1000px){.report-kpis,.report-two,.report-actions{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.report-onepager{padding:18px 16px}.report-kpis,.report-two,.report-actions{grid-template-columns:1fr}.report-funnel-row{grid-template-columns:1fr}.report-bridge .op{display:none}}
 body.tecnologia-active .transform-only-field{display:none!important}
@@ -424,8 +424,9 @@ const STORAGE_KEYS={
   transformacion:"reporte_iniciativas_transformacion_v36",
   tecnologia:"reporte_iniciativas_tecnologia_v37"
 };
-const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null,estadoBuckets:[],avanceBuckets:[],hitosBuckets:[],methodRows:[],timeline:{inicio:"",fin:""}};
+const RADAR_GPP_DEFAULT={url:"https://enginesgmp.github.io/sgmp/modulo-8.html",source:"RADAR módulo 8",corte:"sin actualizar",procesosActivos:null,cerrados:null,atrasados:null,enCurso:null,planificados:null,avancePlan:null,planificacionCompleta:null,alertasMotor:null,inicioTardio:null,atrasadoNoIniciado:null,cerradoFueraPlazo:null,estadoBuckets:[],avanceBuckets:[],hitosBuckets:[],methodRows:[],processDetails:[],timeline:{inicio:"",fin:""}};
 let RADAR_GPP_STATE={...RADAR_GPP_DEFAULT,status:"idle",message:"Pendiente de actualizar desde RADAR"};
+let radarDetailFilter={type:"all",label:"Todos los procesos RADAR"};
 let radarGppAutoRequested=false;
 const GPP_GANTT_SHEET_URL="https://docs.google.com/spreadsheets/d/1xWa4c5XvasIwUpemXtWNZWxVNRcdPXFCsmEPN_JN_Ys/edit";
 const GPP_GANTT_DEFAULT={phases:[{id:"levantamientos",name:"Levantamientos",meta:"40 procesos · 4 analistas",start:"2026-08-29",end:"2026-10-12",color:"navy"},{id:"integracion",name:"Integración",meta:"2 semanas · fase colectiva",start:"2026-10-13",end:"2026-10-26",color:"steel"},{id:"afinamiento",name:"Afinamiento",meta:"2 semanas · 18 brechas",start:"2026-10-27",end:"2026-11-09",color:"gold"}],milestones:[{id:"finLevantamientos",label:"Fin de levantamientos",date:"2026-10-12",type:"dashed"},{id:"cierre",label:"Cierre del programa",date:"2026-11-09",type:"final"}]};
@@ -1030,6 +1031,61 @@ function ensureReportExternalData(force=false){
   ]).finally(()=>{reportExternalDataPromise=null;});
   return reportExternalDataPromise;
 }
+function radarFilterOptions(){
+  const radar=RADAR_GPP_STATE;
+  const hitos=Array.isArray(radar.hitosBuckets)?radar.hitosBuckets:[];
+  const base=[
+    {type:"all",label:"Todos"},
+    {type:"delayed",label:"Atrasados"},
+    {type:"alerts",label:"Con alertas"},
+    {type:"closed",label:"Cerrados"},
+    {type:"inCourse",label:"En curso"},
+    {type:"planned",label:"Planificados"}
+  ];
+  hitos.forEach(item=>{
+    if(Number(item.count)>0) base.push({type:`hito:${item.label}`,label:item.label==="0 de 4"?"Ningún hito":item.label});
+  });
+  return base;
+}
+function radarDetailRows(){
+  const rows=Array.isArray(RADAR_GPP_STATE.processDetails)?RADAR_GPP_STATE.processDetails:[];
+  const type=radarDetailFilter?.type||"all";
+  return rows.filter(row=>{
+    const state=String(row.state||"").toUpperCase();
+    const alerts=String((row.alerts||[]).join(" ")).toUpperCase();
+    if(type==="all")return true;
+    if(type==="delayed")return state.includes("ATRAS")||alerts.includes("ATRAS")||alerts.includes("TARD");
+    if(type==="alerts")return Number(row.alertCount)>0||(Array.isArray(row.alerts)&&row.alerts.length>0);
+    if(type==="closed")return state.includes("CERR");
+    if(type==="inCourse")return state.includes("CURSO");
+    if(type==="planned")return state.includes("PLAN")||state.includes("BACKLOG");
+    if(type==="inicioTardio")return alerts.includes("INICIO TARD");
+    if(type==="atrasadoNoIniciado")return alerts.includes("ATRASADO NO INICIADO");
+    if(type==="cerradoFueraPlazo")return alerts.includes("CERRADO FUERA")||alerts.includes("CIERRE FUERA");
+    if(type.startsWith("hito:"))return String(row.hitos||"")===type.slice(5);
+    return true;
+  });
+}
+function setRadarDetailFilter(type,label){
+  radarDetailFilter={type:type||"all",label:label||"Todos los procesos RADAR"};
+  renderReportView();
+  setTimeout(()=>document.getElementById("radarDetailPanel")?.scrollIntoView({behavior:"smooth",block:"start"}),0);
+}
+function renderRadarDetailPanel(){
+  const all=Array.isArray(RADAR_GPP_STATE.processDetails)?RADAR_GPP_STATE.processDetails:[];
+  const rows=radarDetailRows();
+  const options=radarFilterOptions();
+  const chips=options.map(opt=>`<button type="button" class="radar-chip ${opt.type===(radarDetailFilter?.type||"all")?"active":""}" data-radar-filter="${esc(opt.type)}" data-radar-label="${esc(opt.label)}">${esc(opt.label)}</button>`).join("");
+  if(!all.length){
+    return `<section class="radar-detail-panel" id="radarDetailPanel"><div class="radar-detail-head"><div><b>Detalle RADAR</b><span>No hay filas de detalle disponibles todavía.</span></div></div><div class="radar-detail-empty">Actualiza RADAR para cargar el detalle interno. Si el total aparece pero el detalle no, falta publicar la función Netlify actualizada.</div></section>`;
+  }
+  const body=rows.slice(0,80).map(row=>{
+    const alerts=Array.isArray(row.alerts)&&row.alerts.length?row.alerts.join(" · "):"—";
+    const dates=[row.start,row.end].filter(Boolean).join(" → ")||"—";
+    return `<tr><td>${esc(row.id||"")}</td><td><b>${esc(row.name||"Proceso sin nombre")}</b><br><span>${esc(row.leader||row.analyst||"Sin responsable visible")}</span></td><td>${esc(row.state||"—")}</td><td>${row.progress==null?"—":esc(row.progress+"%")}</td><td>${esc(row.hitos||"—")}<br><span>${esc(row.hitosMeaning||"")}</span></td><td>${esc(dates)}</td><td class="alert-text">${esc(alerts)}</td></tr>`;
+  }).join("");
+  return `<section class="radar-detail-panel" id="radarDetailPanel"><div class="radar-detail-head"><div><b>Detalle RADAR · ${esc(radarDetailFilter?.label||"Todos")}</b><span>${rows.length} de ${all.length} procesos. Los clics del One Pager filtran esta tabla sin abrir el login del RADAR.</span></div><button type="button" class="report-mini-btn" data-radar-action="open">Abrir RADAR oficial</button></div><div class="radar-filter-row">${chips}</div><div class="radar-detail-table-wrap"><table class="radar-detail-table"><thead><tr><th>ID</th><th>Proceso</th><th>Estado</th><th>Avance</th><th>Hitos</th><th>Fechas</th><th>Alertas</th></tr></thead><tbody>${body||'<tr><td colspan="7">Sin procesos para este filtro.</td></tr>'}</tbody></table></div></section>`;
+}
 function renderRadarOnlyReport(el){
   if((RADAR_GPP_STATE.status==="idle"||GPP_GANTT_SHARED.status==="idle")&&!reportExternalDataPromise){
     setTimeout(()=>ensureReportExternalData(false),0);
@@ -1043,39 +1099,40 @@ function renderRadarOnlyReport(el){
   const openRadar=()=>window.open(radar.url,"_blank","noopener");
   const colors=["#011e41","#2b4a70","#5b7897","#8fa6bf","#b9c7d6","#dce3ea"];
   const sumValues=items=>items.reduce((total,item)=>total+(Number(item.count??item.value)||0),0);
-  const stack=(items,mode="count")=>{
+  const stack=(items)=>{
     const total=Math.max(sumValues(items),1);
     return `<div class="report-stack">${items.map((item,index)=>{
       const value=Number(item.count??item.value)||0;
       const width=Math.max(value?7:0,(value/total)*100);
-      return `<div class="${index>3?"light":""}" style="width:${width}%;background:${colors[index%colors.length]}"><span>${value||""}</span></div>`;
-    }).join("")}</div><div class="report-keys">${items.map((item,index)=>`<span><i style="background:${colors[index%colors.length]}"></i>${item.label}</span>`).join("")}<span style="margin-left:auto;font-weight:700;color:#011e41">Suma ${total}</span></div>`;
+      const filter=item.filter||"all";
+      return `<button type="button" class="${index>3?"light":""}" style="width:${width}%;background:${colors[index%colors.length]}" data-radar-filter="${esc(filter)}" data-radar-label="${esc(item.label)}"><span>${value||""}</span></button>`;
+    }).join("")}</div><div class="report-keys">${items.map((item,index)=>`<button type="button" data-radar-filter="${esc(item.filter||"all")}" data-radar-label="${esc(item.label)}"><i style="background:${colors[index%colors.length]}"></i>${esc(item.label)}</button>`).join("")}<span style="margin-left:auto;font-weight:700;color:#011e41">Suma ${total}</span></div>`;
   };
   const hitoMeaning={"0 de 4":"por arrancar","1 de 4":"prework hecho","2 de 4":"en construcción","3 de 4":"por cerrar","4 de 4":"cerrado"};
   const funnel=(items)=>{
     const total=Math.max(...items.map(item=>Number(item.count??item.value)||0),1);
     const normalized=items.map(item=>({
       ...item,
+      rawLabel:item.label,
       label:item.label==="0 de 4"?"Ningún hito":item.label,
       meaning:hitoMeaning[item.label]||item.meaning||""
     }));
     return `<div class="report-funnel">${normalized.map((item,index)=>{
       const value=Number(item.count??item.value)||0;
       const meaning=item.meaning?` · ${item.meaning}`:"";
-      return `<div class="report-funnel-row"><div><b>${item.label}</b>${meaning}</div><div class="track"><i style="width:${Math.max(value?5:0,(value/total)*100)}%;background:${colors[index%colors.length]}"></i></div><div>${value}</div></div>`;
+      const filter=item.filter||`hito:${item.rawLabel}`;
+      return `<button type="button" class="report-funnel-row" data-radar-filter="${esc(filter)}" data-radar-label="${esc(item.label)}"><div><b>${esc(item.label)}</b>${esc(meaning)}</div><div class="track"><i style="width:${Math.max(value?5:0,(value/total)*100)}%;background:${colors[index%colors.length]}"></i></div><div>${value}</div></button>`;
     }).join("")}</div>`;
   };
   const methodRows=Array.isArray(radar.methodRows)?radar.methodRows:[];
   const methodTotal=methodRows.reduce((acc,row)=>({cerrados:acc.cerrados+(Number(row.cerrados)||0),pendientes:acc.pendientes+(Number(row.pendientes)||0),activos:acc.activos+(Number(row.activos)||0)}),{cerrados:0,pendientes:0,activos:0});
   const methodTable=methodRows.length?`<table class="report-method-table"><tr><th>Método</th><th>Cerrados</th><th>Pendientes</th><th>Activos</th><th>Avance</th></tr>${methodRows.map((row,index)=>`<tr><td><i style="display:inline-block;width:9px;height:9px;margin-right:7px;background:${colors[index%colors.length]}"></i>${esc(row.metodo)}</td><td>${radarDisplay(row.cerrados)}</td><td>${radarDisplay(row.pendientes)}</td><td>${radarDisplay(row.activos)}</td><td>${radarDisplay(row.avance)}</td></tr>`).join("")}<tr class="tot"><td>Total</td><td>${methodTotal.cerrados}</td><td>${methodTotal.pendientes}</td><td>${methodTotal.activos}</td><td>${radarDisplay(radar.avancePlan)}</td></tr></table>`:`<p class="report-note">RADAR no entregó clasificación de método para graficar.</p>`;
   const pending=Math.max(0,(Number(radar.procesosActivos)||0)-(Number(radar.cerrados)||0));
-  const timeline=radar.timeline||{};
-  const ganttLabel=timeline.inicio&&timeline.fin?`${timeline.inicio} - ${timeline.fin}`:"Ventana no disponible en RADAR";
-  const estadoItems=Array.isArray(radar.estadoBuckets)&&radar.estadoBuckets.length?radar.estadoBuckets:[{label:"Cerrados",value:radar.cerrados},{label:"Atrasados",value:radar.atrasados},{label:"En curso",value:radar.enCurso},{label:"Planificados",value:radar.planificados}];
-  const avanceItems=Array.isArray(radar.avanceBuckets)&&radar.avanceBuckets.some(x=>Number(x.count)>0)?radar.avanceBuckets:estadoItems;
-  const hitosItems=Array.isArray(radar.hitosBuckets)&&radar.hitosBuckets.some(x=>Number(x.count)>0)?radar.hitosBuckets:[{label:"Inicio tardío",count:radar.inicioTardio},{label:"Atrasado no iniciado",count:radar.atrasadoNoIniciado},{label:"Cerrado fuera plazo",count:radar.cerradoFueraPlazo}];
-  const card=(cls,value,label)=>`<button class="report-kpi ${cls}" data-radar-link="1"><b>${radarDisplay(value)}</b><span>${label}</span></button>`;
-  const action=(title,body,kind="open")=>`<button class="report-action" data-radar-action="${kind}"><b>${title}</b><span>${body}</span></button>`;
+  const estadoItems=(Array.isArray(radar.estadoBuckets)&&radar.estadoBuckets.length?radar.estadoBuckets:[{label:"Cerrados",value:radar.cerrados},{label:"Atrasados",value:radar.atrasados},{label:"En curso",value:radar.enCurso},{label:"Planificados",value:radar.planificados}]).map(item=>({...item,filter:item.label==="Cerrados"?"closed":item.label==="Atrasados"?"delayed":item.label==="En curso"?"inCourse":item.label==="Planificados"?"planned":"all"}));
+  const avanceItems=Array.isArray(radar.avanceBuckets)&&radar.avanceBuckets.some(x=>Number(x.count)>0)?radar.avanceBuckets.map(x=>({...x,filter:"all"})):estadoItems;
+  const hitosItems=Array.isArray(radar.hitosBuckets)&&radar.hitosBuckets.some(x=>Number(x.count)>0)?radar.hitosBuckets:[{label:"Inicio tardío",count:radar.inicioTardio,filter:"inicioTardio"},{label:"Atrasado no iniciado",count:radar.atrasadoNoIniciado,filter:"atrasadoNoIniciado"},{label:"Cerrado fuera plazo",count:radar.cerradoFueraPlazo,filter:"cerradoFueraPlazo"}];
+  const card=(cls,value,label,filter)=>`<button class="report-kpi ${cls}" data-radar-filter="${esc(filter||"all")}" data-radar-label="${esc(label)}"><b>${radarDisplay(value)}</b><span>${label}</span></button>`;
+  const action=(title,body,kind="open",filter="")=>`<button class="report-action" ${filter?`data-radar-filter="${esc(filter)}" data-radar-label="${esc(title)}"`:`data-radar-action="${kind}"`}><b>${title}</b><span>${body}</span></button>`;
   el.innerHTML=`
   <article class="report-onepager">
     <header>
@@ -1084,66 +1141,61 @@ function renderRadarOnlyReport(el){
       <div class="sub">One pager basado exclusivamente en RADAR módulo 8 · corte ${new Date().toLocaleDateString("es-EC")}</div>
     </header>
     <div class="report-kpis">
-      ${card("",radar.procesosActivos,"Procesos activos RADAR")}
-      ${card("",radar.avancePlan,"Avance del plan")}
-      ${card("alert",radar.atrasados,"Procesos atrasados")}
-      ${card("gold",radar.alertasMotor,"Alertas motor V3")}
-      ${card("",radar.cerrados,"Procesos cerrados")}
-      ${card("",radar.enCurso,"Procesos en curso")}
-      ${card("",radar.planificados,"Procesos planificados")}
-      ${card("",radar.planificacionCompleta,"Planificación completa")}
+      ${card("",radar.procesosActivos,"Procesos activos RADAR","all")}
+      ${card("",radar.avancePlan,"Avance del plan","all")}
+      ${card("alert",radar.atrasados,"Procesos atrasados","delayed")}
+      ${card("gold",radar.alertasMotor,"Alertas motor V3","alerts")}
+      ${card("",radar.cerrados,"Procesos cerrados","closed")}
+      ${card("",radar.enCurso,"Procesos en curso","inCourse")}
+      ${card("",radar.planificados,"Procesos planificados","planned")}
+      ${card("",radar.planificacionCompleta,"Planificación completa","all")}
     </div>
     <h2>Cuadre del universo RADAR</h2>
     <div class="report-bridge">
-      <div class="st"><b>${radarDisplay(radar.procesosActivos)}</b><span>Procesos activos</span></div>
+      <button type="button" class="st clickable" data-radar-filter="all" data-radar-label="Procesos activos"><b>${radarDisplay(radar.procesosActivos)}</b><span>Procesos activos</span></button>
       <div class="op">=</div>
-      <div class="st"><b>${radarDisplay(radar.cerrados)}</b><span>Cerrados</span></div>
+      <button type="button" class="st clickable" data-radar-filter="closed" data-radar-label="Procesos cerrados"><b>${radarDisplay(radar.cerrados)}</b><span>Cerrados</span></button>
       <div class="op">+</div>
-      <div class="st out"><b>${radarDisplay(pending)}</b><span>Pendientes en RADAR</span></div>
+      <button type="button" class="st out clickable" data-radar-filter="delayed" data-radar-label="Pendientes / atrasados"><b>${radarDisplay(pending)}</b><span>Pendientes en RADAR</span></button>
     </div>
     <h2>Estado de avance</h2>
     <div class="report-two">
-      <button class="report-box static" type="button">
+      <div class="report-box static">
         <div class="report-box-title">Distribución por porcentaje de avance</div>
         ${stack(avanceItems)}
-      </button>
-      <button class="report-box static" type="button">
-        <div class="report-box-title">Hitos cerrados / alertas del modelo</div>
+      </div>
+      <div class="report-box static">
+        <div class="report-box-title">Hitos cerrados del modelo</div>
         ${funnel(hitosItems)}
-        <p class="report-note">Los hitos corresponden al modelo: prework, construcción, documentación, implementación y cierre.</p>
-      </button>
+        <p class="report-note">Ningún hito = por arrancar; 1 de 4 = prework hecho; 2 de 4 = en construcción; 3 de 4 = por cerrar; 4 de 4 = cerrado.</p>
+      </div>
     </div>
     <h2>Método de levantamiento</h2>
     <div class="report-two">
-      <button class="report-box static" type="button">
-        <div class="report-box-title">Cuadre método × estado</div>
-        ${methodTable}
-      </button>
-      <button class="report-box static" type="button">
-        <div class="report-box-title">Estado vigente en RADAR</div>
-        ${stack(estadoItems)}
-      </button>
+      <div class="report-box static"><div class="report-box-title">Cuadre método × estado</div>${methodTable}</div>
+      <div class="report-box static"><div class="report-box-title">Estado vigente en RADAR</div>${stack(estadoItems)}</div>
     </div>
     <h2>Cronograma de cierre</h2>
-    <div class="report-box static report-gantt">
-      ${renderGppGantt()}
-    </div>
+    <div class="report-box static report-gantt">${renderGppGantt()}</div>
     <h2>Alertas RADAR</h2>
     <div class="report-actions">
-      ${action("Inicio tardío",`${radarDisplay(radar.inicioTardio)} proceso(s) con alerta de arranque frente al plan.`)}
-      ${action("Atrasado no iniciado",`${radarDisplay(radar.atrasadoNoIniciado)} proceso(s) marcados por el motor V3.`)}
-      ${action("Cerrado fuera de plazo",`${radarDisplay(radar.cerradoFueraPlazo)} cierre(s) con desviación de plazo.`)}
+      ${action("Inicio tardío",`${radarDisplay(radar.inicioTardio)} proceso(s) con alerta de arranque frente al plan.`,"open","inicioTardio")}
+      ${action("Atrasado no iniciado",`${radarDisplay(radar.atrasadoNoIniciado)} proceso(s) marcados por el motor V3.`,"open","atrasadoNoIniciado")}
+      ${action("Cerrado fuera de plazo",`${radarDisplay(radar.cerradoFueraPlazo)} cierre(s) con desviación de plazo.`,"open","cerradoFueraPlazo")}
     </div>
+    <h2>Detalle navegable</h2>
+    ${renderRadarDetailPanel()}
     <h2>Navegación del reporte</h2>
     <div class="report-actions">
-      ${action("Abrir RADAR módulo 8","Fuente oficial del One Pager de Transformación.")}
+      ${action("Abrir RADAR oficial","Abre la fuente externa; puede solicitar login según la sesión del navegador.")}
       ${action("Actualizar RADAR","Consulta nuevamente la función segura de Netlify.","refresh")}
       ${action("Vista Gerencial del monitor","Consulta separada de iniciativas; no alimenta este One Pager.","gerencia")}
     </div>
     <p class="report-note">${status}. No se guardan credenciales en el monitor; la lectura se realiza mediante variables de entorno de Netlify.</p>
   </article>`;
-  el.querySelectorAll("[data-radar-link='1'],[data-radar-action='open']").forEach(node=>node.addEventListener("click",openRadar));
-  el.querySelector("[data-radar-action='refresh']")?.addEventListener("click",()=>refreshRadarGpp(true));
+  el.querySelectorAll("[data-radar-filter]").forEach(node=>node.addEventListener("click",event=>{event.preventDefault();setRadarDetailFilter(node.dataset.radarFilter,node.dataset.radarLabel||node.textContent.trim());}));
+  el.querySelectorAll("[data-radar-action='open']").forEach(node=>node.addEventListener("click",openRadar));
+  el.querySelector("[data-radar-action='refresh']")?.addEventListener("click",()=>ensureReportExternalData(true));
   el.querySelector("[data-radar-action='gerencia']")?.addEventListener("click",()=>switchTransformacionView("gerencia"));
   el.querySelector("#gppGanttEditBtn")?.addEventListener("click",openGppGanttSheet);
   el.querySelector("#gppGanttRefreshBtn")?.addEventListener("click",()=>refreshGppGanttPlan(true));
